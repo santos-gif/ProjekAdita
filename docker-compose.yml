@@ -1,0 +1,40 @@
+services:
+  app:
+    build: .
+    container_name: kampus_kolaborasi_app
+    ports:
+      - "8080:80"
+    environment:
+      APP_ENV: development
+      DB_HOST: db
+      DB_PORT: 3306
+      DB_NAME: kampus_kolaborasi
+      DB_USER: kampus_user
+      DB_PASS: kampus_password
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - ./:/var/www/html
+  db:
+    image: mysql:8.4
+    container_name: kampus_kolaborasi_db
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: kampus_kolaborasi
+      MYSQL_USER: kampus_user
+      MYSQL_PASSWORD: kampus_password
+      MYSQL_ROOT_PASSWORD: root_password
+    ports:
+      - "3307:3306"
+    volumes:
+      - db_data:/var/lib/mysql
+      - ./database/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+      - ./database/seed.sql:/docker-entrypoint-initdb.d/02-seed.sql:ro
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-proot_password"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+volumes:
+  db_data:
