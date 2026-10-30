@@ -1,4 +1,0 @@
-# Semua request ke /api/* masuk ke index.php; tidak ada file di backend yang disajikan mentah.
-RewriteEngine On
-RewriteBase /api/
-RewriteRule ^ index.php [L]

@@ -1,24 +1,32 @@
 # Campus Collab
 
-Platform kolaborasi proyek kampus. Backend PHP 8.2 (PDO MySQL, tanpa framework),
-frontend HTML/CSS/JavaScript murni. Tanpa Node.js dan Composer.
+Platform kolaborasi proyek kampus. Backend PHP 8.2 (PDO, tanpa framework), database MariaDB,
+frontend HTML/CSS/JavaScript murni. Tanpa Node.js dan Composer. Dijalankan dengan Docker Compose.
 
 ## Prasyarat
-- XAMPP (Apache dengan `mod_rewrite`, PHP 8.2, ekstensi `pdo_mysql`)
-- MySQL 8 (atau MariaDB dari XAMPP)
+- Docker Desktop (Docker Compose v2)
 
 ## Menjalankan
-1. Buat database `projekadita_db` (utf8mb4), lalu impor skema:
-   `mysql -u <user> -p projekadita_db < backend/database/schema.sql`
-2. Buat `.env.dev` di root proyek berisi `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASS`.
-   Dengan variabel environment `APP_ENV=production` aplikasi memakai `.env.prod`; selain itu `.env.dev`.
-   Kedua file di-ignore git (`.env*`).
-3. Salin `backend/apache.conf` ke konfigurasi Apache (mis. `httpd-vhosts.conf`), ganti `/path/to/ProjekAdita`
-   dengan lokasi proyek. DocumentRoot menunjuk ke `frontend/`, dan `/api` di-alias ke `backend/`.
-4. Restart Apache, lalu buka `http://campus-collab.local` (tambahkan ke file hosts) atau `http://localhost`.
+Tiga service: `frontend` (nginx, juga mem-proxy `/api`), `api` (PHP + Apache), `db` (MariaDB).
+
+1. Buat `.env.dev` di root proyek (di-ignore git) berisi `DB_NAME`, `DB_USER`, `DB_PASS`.
+   `DB_HOST` dan `DB_PORT` diatur otomatis oleh Compose untuk jaringan Docker.
+2. Development (kode PHP dan frontend langsung terbaca dari folder proyek):
+   `docker compose --env-file .env.dev -f docker-compose.yml -f docker-compose.dev.yml up --build`
+   - Aplikasi: `http://localhost:8080`
+   - API langsung: `http://localhost:8081/api/v1/health`
+   - Database dari host: `127.0.0.1:3307`
+3. Produksi (`docker-compose.yml` saja, tanpa mount dan tanpa port database):
+   `docker compose --env-file .env.prod up -d --build`
+   Pasang reverse proxy HTTPS di depan port `8080`; cookie sesi `Secure` aktif secara default
+   (`APP_COOKIE_SECURE=1`).
+
+Skema (`backend/database/schema.sql`) diimpor otomatis hanya pada start pertama, saat volume
+database masih kosong. Untuk mengulang dari nol: `docker compose ... down -v`.
 
 ## API (`/api/v1`, JSON)
-Request POST/PUT/PATCH/DELETE wajib menyertakan header `X-CSRF-Token` (ambil dari `GET /csrf`).
+Request POST/PUT/PATCH/DELETE wajib menyertakan header `X-CSRF-Token` (ambil dari `GET /csrf`);
+tanpa token yang valid server membalas 403.
 
 - `GET /csrf` — token CSRF
 - `GET /health` — status server dan database

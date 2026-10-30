@@ -1,0 +1,18 @@
+# Local development overrides. Run together with the default file:
+#   docker compose --env-file .env.dev -f docker-compose.yml -f docker-compose.dev.yml up --build
+services:
+  db:
+    ports:
+      - "127.0.0.1:${DB_HOST_PORT}:3306"
+
+  api:
+    environment:
+      APP_ENV: development
+      APP_COOKIE_SECURE: "0"
+    ports:
+      - "127.0.0.1:${API_PORT}:8080"
+    # live PHP edits without rebuilding the image
+    volumes:
+      - ./backend/index.php:/var/www/app/index.php:ro
+      - ./backend/Core:/var/www/app/Core:ro
+      - ./backend/Features:/var/www/app/Features:ro

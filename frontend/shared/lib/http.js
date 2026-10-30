@@ -38,7 +38,7 @@ export async function request(method, path, body, retried = false) {
   } catch {
     throw new ApiError(0, 'Tidak dapat terhubung ke server. Periksa koneksi lalu coba lagi.');
   }
-  if (res.status === 419 && !retried) {
+  if (res.status === 403 && !retried) {
     csrf = null; // stale session/token: fetch a fresh one once
     return request(method, path, body, true);
   }
