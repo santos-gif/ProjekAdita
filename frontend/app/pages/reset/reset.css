@@ -1,0 +1,2 @@
+/* The 501 notice is the main outcome of this page, so give it room. */
+#form-message[data-kind="info"] { padding: var(--s4); }

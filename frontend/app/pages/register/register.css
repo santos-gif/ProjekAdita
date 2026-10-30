@@ -1,0 +1,2 @@
+/* Register reuses shared auth styles; the hint sits tight under its input. */
+#password-hint { margin-top: calc(-1 * var(--s1)); }

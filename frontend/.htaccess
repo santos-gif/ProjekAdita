@@ -1,0 +1,5 @@
+# Clean URLs. Static only; /api is aliased to the backend in the vhost.
+Options -Indexes
+DirectoryIndex index.html
+RewriteEngine On
+RewriteRule ^(login|register|reset|dashboard)/?$ app/pages/$1/$1.html [L]

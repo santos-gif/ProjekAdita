@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Masuk - Campus Collab</title>
+  <link rel="stylesheet" href="/shared/styles/tokens.css">
+  <link rel="stylesheet" href="/shared/styles/base.css">
+  <link rel="stylesheet" href="/shared/styles/components.css">
+  <link rel="stylesheet" href="/app/pages/login/login.css">
+  <script type="module" src="/app/pages/login/login.js"></script>
+</head>
+<body class="auth-page">
+  <a class="skip" href="#main">Lewati ke konten</a>
+  <header class="brand-bar"><a class="brand" href="/">Campus Collab</a></header>
+  <main class="auth-main" id="main" tabindex="-1">
+    <div class="auth-card">
+      <h1><span class="title-underline">Masuk</span></h1>
+      <noscript><p class="notice">Halaman ini membutuhkan JavaScript. Aktifkan JavaScript di browser Anda untuk masuk.</p></noscript>
+      <form id="login-form" novalidate>
+        <p id="form-message" class="notice" role="alert"></p>
+        <div class="field">
+          <label for="email">Email</label>
+          <input id="email" name="email" type="email" autocomplete="email" required aria-describedby="email-error">
+          <p id="email-error" class="field-error"></p>
+        </div>
+        <div class="field">
+          <label for="password">Kata sandi</label>
+          <input id="password" name="password" type="password" autocomplete="current-password" required aria-describedby="password-error">
+          <p id="password-error" class="field-error"></p>
+        </div>
+        <div class="login-extras">
+          <label class="check"><input type="checkbox" name="remember"> Tetap masuk</label>
+          <a class="link-pad" href="/reset">Lupa kata sandi?</a>
+        </div>
+        <button class="btn btn--block" type="submit">Masuk</button>
+      </form>
+      <p class="alt">Belum punya akun? <a class="link-pad" href="/register">Daftar</a></p>
+    </div>
+  </main>
+</body>
+</html>
