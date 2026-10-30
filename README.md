@@ -1,35 +1,52 @@
-# Campus Collab
+# Kampus Kolaborasi — PHP Native
 
-Platform kolaborasi proyek kampus. Backend PHP 8.2 (PDO MySQL, tanpa framework),
-frontend HTML/CSS/JavaScript murni. Tanpa Node.js dan Composer.
+MVP platform kolaborasi proyek dan karya kampus. Dibangun dengan PHP Native, MySQL/PDO, HTML, CSS, JavaScript, JSON, Docker, dan Apache. Tidak menggunakan framework.
 
-## Prasyarat
-- XAMPP (Apache dengan `mod_rewrite`, PHP 8.2, ekstensi `pdo_mysql`)
-- MySQL 8 (atau MariaDB dari XAMPP)
+## Fitur MVP
+- Registrasi dan login dengan `password_hash()` / `password_verify()`.
+- Role `user`, `moderator`, dan `admin`.
+- Dashboard dan profil dasar.
+- Daftar, pencarian, filter, dan detail proyek.
+- Pengajuan proyek oleh mahasiswa dengan status moderasi.
+- Admin dapat menyetujui, menolak, atau meminta revisi.
+- Permintaan bergabung proyek dan keputusan pemimpin proyek.
+- Notifikasi dasar.
+- Audit log untuk tindakan administratif.
+- CSRF token, prepared statements, validasi backend, session hardening.
+- REST-style JSON endpoint sederhana pada `/api/projects`.
 
-## Menjalankan
-1. Buat database `projekadita_db` (utf8mb4), lalu impor skema:
-   `mysql -u <user> -p projekadita_db < backend/database/schema.sql`
-2. Buat `.env.dev` di root proyek berisi `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASS`.
-   Dengan variabel environment `APP_ENV=production` aplikasi memakai `.env.prod`; selain itu `.env.dev`.
-   Kedua file di-ignore git (`.env*`).
-3. Salin `backend/apache.conf` ke konfigurasi Apache (mis. `httpd-vhosts.conf`), ganti `/path/to/ProjekAdita`
-   dengan lokasi proyek. DocumentRoot menunjuk ke `frontend/`, dan `/api` di-alias ke `backend/`.
-4. Restart Apache, lalu buka `http://campus-collab.local` (tambahkan ke file hosts) atau `http://localhost`.
+## Menjalankan dengan Docker
+1. Install Docker Desktop.
+2. Ekstrak folder proyek.
+3. Jalankan dari folder ini:
+   ```bash
+   docker compose up -d --build
+   ```
+4. Buka http://localhost:8080
+5. Database tersedia pada port host `3307`.
 
-## API (`/api/v1`, JSON)
-Request POST/PUT/PATCH/DELETE wajib menyertakan header `X-CSRF-Token` (ambil dari `GET /csrf`).
+### Akun demo
+- Admin: `admin@kampus.test` / `Password123!`
+- User: `mahasiswa@kampus.test` / `Password123!`
 
-- `GET /csrf` — token CSRF
-- `GET /health` — status server dan database
-- `POST /auth/register` — daftar (`name`, `email`, `password`, `confirmPassword`)
-- `POST /auth/login` — masuk (`email`, `password`, `remember`)
-- `POST /auth/logout` — keluar
-- `GET /auth/me` — pengguna saat ini atau `null`
-- `POST /auth/reset` — belum tersedia (501)
+Ganti password demo dan kredensial database sebelum deployment. Data seed hanya untuk development.
 
-## Catatan
-Login dan session sudah ada (password di-hash, CSRF, cookie HttpOnly/SameSite), tetapi aplikasi
-belum siap produksi: belum ada pembatasan percobaan login, reset kata sandi belum tersedia,
-dan belum ada otorisasi per fitur atau pengujian keamanan menyeluruh. Jangan dipublikasikan
-ke internet atau dipakai dengan data nyata sebelum itu dilengkapi.
+## Menjalankan tanpa Docker
+- PHP 8.3+, ekstensi `pdo_mysql`, dan MySQL 8+.
+- Buat database `kampus_kolaborasi`, lalu import `database/schema.sql` dan `database/seed.sql`.
+- Atur environment variables atau ubah nilai fallback di `app/config/database.php`.
+- Jalankan:
+  ```bash
+  php -S localhost:8000 -t public
+  ```
+- Buka http://localhost:8000
+
+## Struktur
+- `app/`: konfigurasi, helper, controller, model.
+- `public/`: entry point, CSS, JS, upload publik non-sensitif.
+- `database/`: schema dan seed.
+- `storage/`: dokumen privat (jangan diekspos langsung oleh web server).
+- `docs/`: rancangan endpoint dan catatan pengembangan.
+
+## Catatan penting sebelum produksi
+MVP ini belum mengimplementasikan pengiriman email sungguhan, verifikasi email, reset password berbasis token email, antivirus upload, chat realtime, kompetisi/event lengkap, publikasi HKI, serta rekomendasi machine learning. Jangan mengaktifkan pendaftaran publik tanpa verifikasi email dan kebijakan domain kampus. Terapkan HTTPS, secrets manager, backup, rate limiting di reverse proxy, pemindaian file, kebijakan privasi, dan pengujian keamanan sebelum digunakan kampus.
