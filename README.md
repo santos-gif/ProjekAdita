@@ -1,30 +1,35 @@
-# Campus Collab — Tanpa Framework
+# Campus Collab
 
-Starter MVP platform kolaborasi kampus menggunakan:
-- HTML, CSS, JavaScript murni
-- Node.js `http` (tanpa Express)
-- PostgreSQL dengan driver `pg` (driver database, bukan framework)
+Platform kolaborasi proyek kampus. Backend PHP 8.2 (PDO MySQL, tanpa framework),
+frontend HTML/CSS/JavaScript murni. Tanpa Node.js dan Composer.
 
 ## Prasyarat
-- Node.js versi LTS
-- PostgreSQL
-- VS Code (opsional)
+- XAMPP (Apache dengan `mod_rewrite`, PHP 8.2, ekstensi `pdo_mysql`)
+- MySQL 8 (atau MariaDB dari XAMPP)
 
-## Menjalankan aplikasi
-1. Buat database PostgreSQL bernama `campus_collab`.
-2. Jalankan `backend/database/schema.sql` pada database tersebut.
-3. Salin `.env.example` menjadi `.env`, lalu sesuaikan `DATABASE_URL`.
-4. Jalankan `npm install`.
-5. Jalankan `npm start`.
-6. Buka `http://localhost:3000`.
+## Menjalankan
+1. Buat database `projekadita_db` (utf8mb4), lalu impor skema:
+   `mysql -u <user> -p projekadita_db < backend/database/schema.sql`
+2. Buat `.env.dev` di root proyek berisi `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASS`.
+   Dengan variabel environment `APP_ENV=production` aplikasi memakai `.env.prod`; selain itu `.env.dev`.
+   Kedua file di-ignore git (`.env*`).
+3. Salin `backend/apache.conf` ke konfigurasi Apache (mis. `httpd-vhosts.conf`), ganti `/path/to/ProjekAdita`
+   dengan lokasi proyek. DocumentRoot menunjuk ke `frontend/`, dan `/api` di-alias ke `backend/`.
+4. Restart Apache, lalu buka `http://campus-collab.local` (tambahkan ke file hosts) atau `http://localhost`.
 
-## API awal
-- `GET /api/v1/health` — status server dan database
-- `GET /api/v1/projects` — daftar proyek
-- `POST /api/v1/projects` — membuat pengajuan proyek
-- `GET /api/v1/departments` — daftar program studi
+## API (`/api/v1`, JSON)
+Request POST/PUT/PATCH/DELETE wajib menyertakan header `X-CSRF-Token` (ambil dari `GET /csrf`).
+
+- `GET /csrf` — token CSRF
+- `GET /health` — status server dan database
+- `POST /auth/register` — daftar (`name`, `email`, `password`, `confirmPassword`)
+- `POST /auth/login` — masuk (`email`, `password`, `remember`)
+- `POST /auth/logout` — keluar
+- `GET /auth/me` — pengguna saat ini atau `null`
+- `POST /auth/reset` — belum tersedia (501)
 
 ## Catatan
-Ini adalah fondasi MVP untuk pengembangan. Autentikasi dan otorisasi belum diaktifkan,
-jadi jangan dipublikasikan ke internet atau digunakan dengan data nyata sebelum fitur
-login, session aman, validasi lanjutan, pembatasan akses, dan pengujian keamanan dibuat.
+Login dan session sudah ada (password di-hash, CSRF, cookie HttpOnly/SameSite), tetapi aplikasi
+belum siap produksi: belum ada pembatasan percobaan login, reset kata sandi belum tersedia,
+dan belum ada otorisasi per fitur atau pengujian keamanan menyeluruh. Jangan dipublikasikan
+ke internet atau dipakai dengan data nyata sebelum itu dilengkapi.

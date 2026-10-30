@@ -1,0 +1,4 @@
+#content { display: grid; gap: var(--s5); }
+/* Neutral look for the loading text; errors/info set data-kind and keep notice colors. */
+#status:not([data-kind]) { border-color: var(--border); background: var(--surface-2); }
+.empty h3 { font-size: 1.125rem; }
