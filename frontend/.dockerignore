@@ -1,0 +1,6 @@
+# Build context = this folder. nginx.conf is not listed: the Dockerfile copies it from here.
+Dockerfile
+.dockerignore
+*.md
+.git
+.env*

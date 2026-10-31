@@ -28,6 +28,7 @@ CONF
 EOF
 
 COPY php.ini /usr/local/etc/php/conf.d/zz-app.ini
-COPY index.php /var/www/app/index.php
-COPY Core /var/www/app/Core
-COPY Features /var/www/app/Features
+
+# What may enter the image is decided by .dockerignore, not by a list here.
+WORKDIR /var/www/app
+COPY . .

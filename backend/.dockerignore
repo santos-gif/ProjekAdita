@@ -1,0 +1,10 @@
+# Build context = this folder. Anything listed here never reaches `COPY . .`.
+# schema.sql is mounted into the db container by compose, so the api image does not need it.
+migrations
+# Build inputs only; the Dockerfile is still read by Docker itself.
+Dockerfile
+.dockerignore
+# Secrets and noise
+.env*
+*.md
+.git

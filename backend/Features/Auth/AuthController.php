@@ -7,6 +7,8 @@ namespace Features\Auth;
 use Core\Auth;
 use Core\Csrf;
 use Core\Response;
+use Features\Auth\Model\LoginInput;
+use Features\Auth\Model\RegisterInput;
 
 final class AuthController
 {
@@ -18,57 +20,38 @@ final class AuthController
 
     public function register(): void
     {
-        $in = Response::body();
-        $name = is_string($in['name'] ?? null) ? trim($in['name']) : '';
-        $email = is_string($in['email'] ?? null) ? strtolower(trim($in['email'])) : '';
-        $password = is_string($in['password'] ?? null) ? $in['password'] : '';
-        $confirm = is_string($in['confirmPassword'] ?? null) ? $in['confirmPassword'] : '';
-
-        $errors = [];
-        $len = mb_strlen($name);
-        if ($len < 2 || $len > 80) {
-            $errors['name'] = 'Nama harus 2-80 karakter.';
-        }
-        if (strlen($email) > 190 || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
-            $errors['email'] = 'Email tidak valid.';
-        }
-        // bcrypt only uses the first 72 bytes, hence a byte-length cap.
-        if (strlen($password) < 8 || strlen($password) > 72) {
-            $errors['password'] = 'Kata sandi harus 8-72 karakter.';
-        }
-        if (!hash_equals($password, $confirm)) {
-            $errors['confirmPassword'] = 'Konfirmasi kata sandi tidak cocok.';
-        }
+        $in = RegisterInput::fromRequest(Response::body());
+        $errors = $in->errors();
         if ($errors) {
             Response::fail(422, 'Data tidak valid.', $errors);
         }
 
-        $id = $this->users->create($name, $email, password_hash($password, PASSWORD_DEFAULT));
+        $id = $this->users->create($in->name, $in->email, password_hash($in->password, PASSWORD_DEFAULT));
         if ($id === null) {
             Response::fail(409, 'Email sudah terdaftar.');
         }
         Auth::login($id, false);
-        Response::ok(['user' => $this->users->findPublicById($id)], 201, 'Registrasi berhasil.');
+        Response::ok(['user' => $this->users->findPublicById($id)?->toArray()], 201, 'Registrasi berhasil.');
     }
 
     public function login(): void
     {
-        $in = Response::body();
-        $email = is_string($in['email'] ?? null) ? strtolower(trim($in['email'])) : '';
-        $password = is_string($in['password'] ?? null) ? $in['password'] : '';
+        $in = LoginInput::fromRequest(Response::body());
 
-        $user = $this->users->findByEmail($email);
+        $found = $this->users->findByEmail($in->email);
         // Dummy hash is verified when the email is unknown, so timing does not reveal which emails exist.
-        $valid = password_verify($password, $user['password_hash'] ?? (self::$dummyHash ??= password_hash('x', PASSWORD_DEFAULT)));
-        if (!$user || !$valid) {
+        $valid = password_verify(
+		$in->password, 
+		$found?->passwordHash ?? (self::$dummyHash ??= password_hash('x', PASSWORD_DEFAULT))
+		);
+        if ($found === null || !$valid) {
             Response::fail(401, 'Email atau kata sandi salah.');
         }
-        if (password_needs_rehash($user['password_hash'], PASSWORD_DEFAULT)) {
-            $this->users->updateHash((int) $user['id'], password_hash($password, PASSWORD_DEFAULT));
+        if (password_needs_rehash($found->passwordHash, PASSWORD_DEFAULT)) {
+            $this->users->updateHash($found->user->id, password_hash($in->password, PASSWORD_DEFAULT));
         }
-        Auth::login((int) $user['id'], ($in['remember'] ?? false) === true);
-        unset($user['password_hash']);
-        Response::ok(['user' => $user]);
+        Auth::login($found->user->id, $in->remember);
+        Response::ok(['user' => $found->user->toArray()]);
     }
 
     public function logout(): void
@@ -81,7 +64,7 @@ final class AuthController
     {
         // No cookie = anonymous visitor: do not create a session for them.
         $id = isset($_COOKIE[session_name()]) ? Auth::userId() : null;
-        Response::ok(['user' => $id === null ? null : $this->users->findPublicById($id)]);
+        Response::ok(['user' => $id === null ? null : $this->users->findPublicById($id)?->toArray()]);
     }
 
     public function reset(): void
