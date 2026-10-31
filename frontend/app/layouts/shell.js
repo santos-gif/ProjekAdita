@@ -3,7 +3,7 @@ import { initials, firstName } from '../../shared/helpers/format.js';
 
 const NAV_ITEMS = [
   { key: 'dashboard', label: 'Dashboard', href: '/dashboard' },
-  { key: 'add-project', label: '+ Add Project', href: '/add-project' },
+  { key: 'add-project', label: 'Add Project', href: '/add-project' },
   { key: 'projek-saya', label: 'Projek Saya', badge: 'Segera hadir' },
   { key: 'projek-diikuti', label: 'Projek yang diikuti', badge: 'Segera hadir' },
   { key: 'lamaran', label: 'Lamaran', badge: 'Segera hadir' },

@@ -1,0 +1,201 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Add Project - ProjekAdita</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/shared/styles/tokens.css">
+  <link rel="stylesheet" href="/shared/styles/base.css">
+  <link rel="stylesheet" href="/shared/styles/components.css">
+  <link rel="stylesheet" href="/app/pages/add-project/add-project.css">
+  <script type="module" src="/app/pages/add-project/add-project.js"></script>
+</head>
+<body>
+  <a class="skip" href="#main">Lewati ke konten</a>
+  <div id="shell"></div>
+
+  <div class="app-layout">
+    <aside id="sidebar" class="sidebar" aria-label="Menu navigasi"></aside>
+
+    <main class="page" id="main" tabindex="-1">
+      <noscript><p class="notice">Halaman ini membutuhkan JavaScript.</p></noscript>
+      <div id="notification" class="notice" role="status" hidden></div>
+
+      <div class="project-card">
+        <!-- Card Header Banner -->
+        <div class="card-banner">
+          <div class="banner-title-wrap">
+            <span class="banner-dot" aria-hidden="true"></span>
+            <h1 class="banner-title">Add Project (Tambah Proyek)</h1>
+          </div>
+          <div class="banner-badge">
+            <span>Formulir</span>
+            <span>Kolaborasi</span>
+          </div>
+        </div>
+
+        <!-- Form Body -->
+        <form id="add-project-form" class="card-body" novalidate>
+          <!-- Row 1: Thumbnail & Project Name -->
+          <div class="form-row-top">
+            <div class="form-group thumbnail-group">
+              <label class="field-label" for="thumbnail-input">THUMBNAIL PROYEK</label>
+              <div class="thumbnail-box" id="thumbnail-box" tabindex="0" role="button" aria-label="Upload thumbnail proyek">
+                <input type="file" id="thumbnail-input" name="thumbnail" accept="image/png,image/jpeg,image/webp" class="sr-only">
+                <div class="thumbnail-preview" id="thumbnail-preview">
+                  <div class="mock-slide">
+                    <div class="mock-top-bar"></div>
+                    <div class="mock-content">
+                      <div class="mock-badge">
+                        <span class="mock-badge-tag">CYBER</span>
+                        <span class="mock-badge-tag">SECURITY</span>
+                      </div>
+                      <div class="mock-text-lines">
+                        <div class="mock-text-title">project name</div>
+                        <div class="mock-text-sub">description</div>
+                        <div class="mock-text-sub">requirements</div>
+                        <div class="mock-text-sub">selection</div>
+                        <div class="mock-text-accent">Add tags</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div class="thumbnail-overlay">
+                  <span>Pilih Gambar</span>
+                </div>
+              </div>
+              <p class="field-hint">Format didukung: JPG, PNG, WEBP (Maks. 2MB)</p>
+            </div>
+
+            <div class="form-group project-name-group">
+              <label class="field-label" for="project-name">
+                PROJECT NAME (NAMA PROYEK) <span class="required">*</span>
+              </label>
+              <input 
+                type="text" 
+                id="project-name" 
+                name="title" 
+                class="form-control" 
+                required 
+                value="Cyber Security: Shielding Against Cyber Threats"
+                placeholder="Masukkan judul proyek...">
+              <p class="field-hint">Buat judul yang ringkas, jelas, dan mempresentasikan tujuan inti kolaborasi.</p>
+              <p class="field-error" id="name-error"></p>
+            </div>
+          </div>
+
+          <!-- Row 2: Description -->
+          <div class="form-group">
+            <div class="label-with-aside">
+              <label class="field-label" for="project-desc">
+                DESCRIPTION (DESKRIPSI PROYEK) <span class="required">*</span>
+              </label>
+              <span class="label-aside" id="desc-count-label">Minimal 50 karakter</span>
+            </div>
+            <textarea 
+              id="project-desc" 
+              name="description" 
+              class="form-control form-textarea" 
+              rows="3" 
+              required 
+              placeholder="Jelaskan gambaran umum, latar belakang, dan tujuan proyek...">Proyek riset dan implementasi sistem pertahanan siber untuk mitigasi serangan siber kampus berbasis analitik lalu lintas data secara real-time.</textarea>
+            <p class="field-error" id="desc-error"></p>
+          </div>
+
+          <!-- Row 3: Requirements -->
+          <div class="form-group">
+            <label class="field-label" for="project-requirements">
+              REQUIREMENTS (PERSYARATAN ANGGOTA / KEBUTUHAN)
+            </label>
+            <textarea 
+              id="project-requirements" 
+              name="requirements" 
+              class="form-control form-textarea" 
+              rows="3" 
+              placeholder="Tuliskan keahlian atau syarat anggota tim...">- Mahasiswa aktif Informatika/Sistem Informasi
+- Memahami konsep dasar Jaringan Komputer & Firewall
+- Memiliki motivasi belajar dan kerja sama tim yang baik</textarea>
+          </div>
+
+          <!-- Row 4: Selection Method & Quota -->
+          <div class="form-row-two-col">
+            <div class="form-group">
+              <label class="field-label" for="selection-method">
+                SELECTION METHOD (METODE SELEKSI)
+              </label>
+              <div class="select-wrapper">
+                <select id="selection-method" name="selection_method" class="form-control select-control">
+                  <option value="Kurasi Portofolio & CV" selected>Kurasi Portofolio & CV</option>
+                  <option value="Wawancara Langsung">Wawancara Langsung</option>
+                  <option value="Tes Teknis">Tes Teknis</option>
+                  <option value="First Come First Served">First Come First Served</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label class="field-label" for="quota-input">
+                KUOTA ANGGOTA (SELECTION QUOTA)
+              </label>
+              <div class="input-suffix-wrapper">
+                <input 
+                  type="number" 
+                  id="quota-input" 
+                  name="max_members" 
+                  class="form-control input-suffix" 
+                  min="1" 
+                  max="50" 
+                  value="4">
+                <span class="suffix-label">Orang</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Row 5: Add Tags -->
+          <div class="form-group">
+            <label class="field-label" for="tag-input">
+              ADD TAGS (TAG PROYEK)
+            </label>
+            <div class="tags-box" id="tags-box">
+              <div class="tag-pill tag-pill--green" data-tag="CyberSecurity">
+                <span class="tag-text">#CyberSecurity</span>
+                <button type="button" class="tag-remove" aria-label="Hapus tag CyberSecurity">×</button>
+              </div>
+              <div class="tag-pill tag-pill--orange" data-tag="Networking">
+                <span class="tag-text">#Networking</span>
+                <button type="button" class="tag-remove" aria-label="Hapus tag Networking">×</button>
+              </div>
+              <div class="tag-pill tag-pill--blue" data-tag="Research">
+                <span class="tag-text">#Research</span>
+                <button type="button" class="tag-remove" aria-label="Hapus tag Research">×</button>
+              </div>
+              <input 
+                type="text" 
+                id="tag-input" 
+                class="tag-inline-input" 
+                placeholder="+ Tambah tag lalu tekan Enter..."
+                autocomplete="off">
+            </div>
+            <p class="field-hint">Gunakan tag relevan seperti bidang ilmu, bahasa pemrograman, atau tools yang dipakai.</p>
+          </div>
+
+          <!-- Row 6: Actions -->
+          <div class="form-actions">
+            <a href="/dashboard" class="btn-cancel" id="btn-cancel">Batal</a>
+            <div class="actions-right">
+              <button type="button" class="btn-secondary" id="btn-draft">Simpan Draf</button>
+              <button type="submit" class="btn-primary" id="btn-upload">
+                <span class="upload-arrow" aria-hidden="true">↑</span>
+                Upload
+              </button>
+            </div>
+          </div>
+        </form>
+      </div>
+    </main>
+  </div>
+</body>
+</html>
