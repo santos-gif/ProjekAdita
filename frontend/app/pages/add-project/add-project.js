@@ -39,7 +39,7 @@ try {
   });
 }
 
-// ---------- Thumbnail Upload ----------
+// ---------- Thumbnail Upload & Safe Canvas Preview ----------
 const thumbnailBox = document.getElementById('thumbnail-box');
 const thumbnailInput = document.getElementById('thumbnail-input');
 const thumbnailPreview = document.getElementById('thumbnail-preview');
@@ -53,7 +53,8 @@ thumbnailBox.addEventListener('keydown', (e) => {
 });
 
 let thumbnailDataUrl = null;
-thumbnailInput.addEventListener('change', () => {
+
+thumbnailInput.addEventListener('change', async () => {
   const file = thumbnailInput.files?.[0];
   if (!file) return;
 
@@ -63,12 +64,57 @@ thumbnailInput.addEventListener('change', () => {
     return;
   }
 
+  // Read base64 data for storage/upload
   const reader = new FileReader();
   reader.onload = (e) => {
     thumbnailDataUrl = e.target.result;
-    thumbnailPreview.innerHTML = `<img src="${thumbnailDataUrl}" alt="Preview thumbnail">`;
   };
   reader.readAsDataURL(file);
+
+  // Render preview safely using Canvas (bypasses CSP restrictions on data: URLs)
+  try {
+    let bitmap;
+    if (window.createImageBitmap) {
+      bitmap = await createImageBitmap(file);
+    } else {
+      bitmap = await new Promise((resolve, reject) => {
+        const img = new Image();
+        img.onload = () => resolve(img);
+        img.onerror = reject;
+        img.src = URL.createObjectURL(file);
+      });
+    }
+
+    const canvas = document.createElement('canvas');
+    const dpr = window.devicePixelRatio || 2;
+    const boxW = thumbnailBox.clientWidth || 200;
+    const boxH = thumbnailBox.clientHeight || 124;
+    canvas.width = boxW * dpr;
+    canvas.height = boxH * dpr;
+    canvas.style.width = '100%';
+    canvas.style.height = '100%';
+    canvas.style.display = 'block';
+    canvas.style.borderRadius = 'inherit';
+
+    const ctx = canvas.getContext('2d');
+    const scale = Math.max(canvas.width / bitmap.width, canvas.height / bitmap.height);
+    const x = (canvas.width - bitmap.width * scale) / 2;
+    const y = (canvas.height - bitmap.height * scale) / 2;
+    ctx.drawImage(bitmap, x, y, bitmap.width * scale, bitmap.height * scale);
+
+    thumbnailPreview.replaceChildren(canvas);
+  } catch (err) {
+    console.warn('Canvas render fallback to img:', err);
+    try {
+      const blobUrl = URL.createObjectURL(file);
+      const img = document.createElement('img');
+      img.alt = 'Preview thumbnail';
+      img.src = blobUrl;
+      thumbnailPreview.replaceChildren(img);
+    } catch {
+      notify('Gagal menampilkan preview gambar.', 'error');
+    }
+  }
 });
 
 // ---------- Tags Handling (All Gray) ----------
