@@ -115,6 +115,42 @@
 .burger { width: 20px; height: 2px; background: currentColor; box-shadow: 0 -6px currentColor, 0 6px currentColor; }
 .avatar { background: var(--accent); color: #0f172a; }
 
+/* ---------- notification bell ---------- */
+.notif-btn { position: relative; }
+.notif-icon {
+  display: block;
+  width: 20px;
+  height: 20px;
+  background: none;
+}
+.notif-icon::before {
+  content: "";
+  display: block;
+  width: 16px;
+  height: 14px;
+  margin: 2px auto 0;
+  border: 2px solid currentColor;
+  border-radius: 8px 8px 0 0;
+}
+.notif-icon::after {
+  content: "";
+  display: block;
+  width: 20px;
+  height: 2px;
+  background: currentColor;
+  border-radius: 1px;
+}
+.notif-dot {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--accent);
+  border: 1.5px solid var(--header-bg);
+}
+
 .search {
   flex: 1;
   min-width: 0;
@@ -227,7 +263,7 @@ span.nav-item { color: var(--text-muted); cursor: not-allowed; }
 
 /* ---------- dashboard ---------- */
 .page { max-width: 1040px; margin: 0 auto; padding: var(--s6) var(--s4) var(--s12); display: grid; gap: var(--s6); }
-.empty { display: grid; gap: var(--s3); justify-items: start; padding: var(--s8) var(--s6); border: 2px dashed var(--border); border-radius: var(--r-lg); background: var(--surface); }
+.empty { display: grid; gap: var(--s3); justify-items: start; padding: var(--s8) var(--s6); border: 3px dashed var(--border); border-radius: var(--r-lg); background: var(--surface); }
 .empty p { color: var(--text-muted); max-width: 52ch; }
 
 @media (min-width: 640px) {

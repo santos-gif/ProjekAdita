@@ -15,7 +15,7 @@ export function mountShell(root, { user, onLogout, onSearch }) {
   const items = [navItem('Dashboard', true), ...NAV.map((n) => navItem(n))];
   if (user.role === 'admin') items.push(navItem('Projek Request'));
   const drawer = el('aside', { id: 'drawer', class: 'drawer', role: 'dialog', 'aria-modal': 'true', 'aria-label': 'Menu navigasi' },
-    el('div', { class: 'drawer-head' }, el('span', { text: 'Campus Collab' }), closeBtn),
+    el('div', { class: 'drawer-head' }, el('span', { text: 'ProjekAdita' }), closeBtn),
     el('nav', { 'aria-label': 'Navigasi utama' }, el('ul', { class: 'nav' }, ...items)));
   const scrim = el('div', { class: 'scrim' });
 
@@ -32,8 +32,12 @@ export function mountShell(root, { user, onLogout, onSearch }) {
   const avatar = el('button', { class: 'icon-btn avatar', type: 'button', 'aria-label': 'Menu akun', 'aria-expanded': 'false', 'aria-controls': 'user-menu', text: initials(user.name) });
   const menu = el('div', { class: 'menu' }, avatar, panel);
 
+  const notifBtn = el('button', { class: 'icon-btn notif-btn', type: 'button', 'aria-label': 'Notifikasi' },
+    el('span', { class: 'notif-icon', 'aria-hidden': 'true' }),
+    el('span', { class: 'notif-dot', 'aria-hidden': 'true' }));
+
   root.append(
-    el('header', { class: 'app-header' }, burger, el('a', { class: 'brand', href: '/dashboard', text: 'Campus Collab' }), search, menu),
+    el('header', { class: 'app-header' }, burger, el('a', { class: 'brand', href: '/dashboard', text: 'ProjekAdita' }), search, notifBtn, menu),
     scrim, drawer);
 
   const setDrawer = (open) => {
