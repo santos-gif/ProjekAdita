@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1
 FROM php:8.2-apache
 
-RUN <<'EOF'
+RUN tr -d '\r' <<'EOF' | sh -e
 set -e
 docker-php-ext-install pdo_mysql
 a2enmod rewrite
