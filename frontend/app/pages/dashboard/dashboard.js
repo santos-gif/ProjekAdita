@@ -17,6 +17,7 @@ try {
   if (user) {
     mountShell(document.getElementById('shell'), {
       user,
+      active: 'dashboard',
       onLogout: async () => {
         try {
           await logout();
