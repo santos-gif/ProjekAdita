@@ -1,4 +1,20 @@
-#content { display: grid; gap: var(--s5); }
+#content {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 16px;
+}
+#content h1 {
+  font-size: 1.625rem;
+  font-weight: 700;
+  color: #0f172a;
+  line-height: 1.25;
+}
+#content h2 {
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: #0f172a;
+  line-height: 1.3;
+}
 /* Neutral look for the loading text; errors/info set data-kind and keep notice colors. */
 #status:not([data-kind]) { border-color: var(--border); background: var(--surface-2); }
-.empty h3 { font-size: 1.125rem; }

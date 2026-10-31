@@ -71,11 +71,9 @@ thumbnailInput.addEventListener('change', () => {
   reader.readAsDataURL(file);
 });
 
-// ---------- Tags Handling ----------
+// ---------- Tags Handling (All Gray) ----------
 const tagsBox = document.getElementById('tags-box');
 const tagInput = document.getElementById('tag-input');
-const tagColorClasses = ['tag-pill--green', 'tag-pill--orange', 'tag-pill--blue'];
-let colorIndex = 0;
 
 function createTagElement(tagName) {
   const cleanTag = tagName.replace(/^#/, '').trim();
@@ -89,8 +87,7 @@ function createTagElement(tagName) {
   }
 
   const pill = document.createElement('div');
-  pill.className = `tag-pill ${tagColorClasses[colorIndex % tagColorClasses.length]}`;
-  colorIndex++;
+  pill.className = 'tag-pill tag-pill--gray';
   pill.dataset.tag = cleanTag;
 
   const textSpan = document.createElement('span');

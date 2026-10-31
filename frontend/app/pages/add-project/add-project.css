@@ -5,6 +5,7 @@
   border: 1px solid var(--border);
   box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.06), 0 1px 2px -1px rgba(0, 0, 0, 0.06);
   overflow: hidden;
+  max-width: 980px;
 }
 
 /* Banner Header */
@@ -281,7 +282,7 @@
   opacity: 1;
 }
 
-/* Tag Input Box */
+/* Tag Input Box: all gray */
 .tags-box {
   display: flex;
   flex-wrap: wrap;
@@ -303,44 +304,41 @@
 .tag-pill {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
-  padding: 3px 8px;
-  border-radius: var(--r-sm);
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 6px;
   font-size: 0.75rem;
   font-weight: 600;
   line-height: 1.3;
+  background: #f1f5f9;
+  border: 1px solid #cbd5e1;
+  color: #334155;
 }
 
-.tag-pill--green {
-  background: #dcfce7;
-  border: 1px solid #86efac;
-  color: #166534;
-}
-
-.tag-pill--orange {
-  background: #ffedd5;
-  border: 1px solid #fed7aa;
-  color: #c2410c;
-}
-
-.tag-pill--blue {
-  background: #e0e7ff;
-  border: 1px solid #c7d2fe;
-  color: #4338ca;
+/* All tags gray */
+.tag-pill--green,
+.tag-pill--orange,
+.tag-pill--blue,
+.tag-pill--gray {
+  background: #f1f5f9;
+  border: 1px solid #cbd5e1;
+  color: #334155;
 }
 
 .tag-remove {
   border: 0;
   background: transparent;
-  color: inherit;
+  color: #64748b;
   font-size: 13px;
   line-height: 1;
   cursor: pointer;
   padding: 0 2px;
-  opacity: 0.7;
+  opacity: 0.8;
+  transition: color 0.15s ease, opacity 0.15s ease;
 }
 
 .tag-remove:hover {
+  color: #0f172a;
   opacity: 1;
 }
 
