@@ -20,7 +20,7 @@ services:
       # named volume: Docker-managed storage that keeps the data between restarts
       - db_data:/var/lib/mysql
       # imported only on the very first start, while the volume is still empty
-      - ./backend/database/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+      - ./backend/migrations/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
     healthcheck:
       test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
       interval: 10s

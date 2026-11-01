@@ -3,7 +3,7 @@
  * @property {number} id
  * @property {string} name
  * @property {string} email
- * @property {'user'|'admin'} role
+ * @property {'user'|'moderator'|'admin'} role
  */
 
 /**

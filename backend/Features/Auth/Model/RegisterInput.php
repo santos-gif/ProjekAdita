@@ -28,8 +28,8 @@ final readonly class RegisterInput
 	public function errors(): array
 	{
 		$errors = [];
-		$len_name = mb_strlen($this->name);
-		if ($len_name < 5 || $len_name > 80) {
+		$lenName = mb_strlen($this->name);
+		if ($lenName < 5 || $lenName > 80) {
 			$errors['name'] = 'Nama harus 5-80 karakter.';
 		}
 		if (strlen($this->email) > 190 || !filter_var($this->email, FILTER_VALIDATE_EMAIL)) {

@@ -19,7 +19,7 @@ services:
       - "127.0.0.1:${DB_HOST_PORT:?set DB_HOST_PORT in .env.dev}:3306"
     volumes:
       - db_data:/var/lib/mysql
-      - ./backend/database/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+      - ./backend/migrations/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
     healthcheck:
       test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
       interval: 10s

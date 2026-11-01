@@ -33,7 +33,7 @@ tambahkan `APP_COOKIE_SECURE=0` di `.env`. Untuk produksi, pakai `.env.prod` dan
 Melihat isi database (nama container dev `projekadita-dev-db-1`; untuk file standar `projekadita-db-1`):
 `docker exec -it projekadita-dev-db-1 sh -c 'mariadb -u$MARIADB_USER -p$MARIADB_PASSWORD $MARIADB_DATABASE'`
 
-Skema (`backend/database/schema.sql`) diimpor otomatis hanya pada start pertama, saat volume
+Skema (`backend/migrations/schema.sql`) diimpor otomatis hanya pada start pertama, saat volume
 database masih kosong. Untuk mengulang dari nol: `down -v`.
 
 ## API (`/api/v1`, JSON)

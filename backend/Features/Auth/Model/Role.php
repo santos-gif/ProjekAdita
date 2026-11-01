@@ -7,5 +7,6 @@ namespace Features\Auth\Model;
 enum Role: string
 {
     case User = 'user';
+    case Moderator = 'moderator';
     case Admin = 'admin';
 }
