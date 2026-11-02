@@ -12,7 +12,8 @@ final class Request
 	public static function body(int $limit = 65536): array
 	{
 		$contentType = $_SERVER['CONTENT_TYPE'] ?? $_SERVER['HTTP_CONTENT_TYPE'] ?? '';
-		if (!stripos($contentType, 'application/json')) {
+		// stripos returns 0 (falsy) when the type starts with application/json, so compare with === false.
+		if (stripos($contentType, 'application/json') === false) {
 			Response::fail(415, 'Unsupported Media Type.');
 		}
 		$raw = (string) stream_get_contents(fopen('php://input', 'rb'), $limit + 1);
@@ -31,5 +32,16 @@ final class Request
 			return $data;
 		}
 		Response::fail(400, 'Format JSON tidak valid.');
+	}
+
+	/**
+	 * Address of the client. nginx overwrites X-Forwarded-For with the real peer, so it names the visitor
+	 * (REMOTE_ADDR would always be the nginx container).
+	 * shortcut: trusts the header; when the API is reachable without nginx (dev API_PORT) a client can spoof it.
+	 */
+	public static function ip(): string
+	{
+		$forwarded = trim(explode(',', $_SERVER['HTTP_X_FORWARDED_FOR'] ?? '')[0]);
+		return filter_var($forwarded, FILTER_VALIDATE_IP) ? $forwarded : ($_SERVER['REMOTE_ADDR'] ?? '0.0.0.0');
 	}
 }

@@ -111,7 +111,25 @@ CREATE TABLE IF NOT EXISTS notifications (
     CONSTRAINT fk_notif_project FOREIGN KEY (project_id) REFERENCES projects (id) ON DELETE CASCADE
 ) ENGINE=InnoDB;
 
+-- Failed-attempt counters per visitor. One row per (ip, email); login_attempts counts wrong passwords,
+-- started_at is when the current 3-minute window (or lockout) began. Stale rows are deleted by the code.
 CREATE TABLE IF NOT EXISTS rate_limits (
-	ip_address VARCHAR(45) NOT NULL PRIMARY KEY
-	current_login_attempts INT(1) NOT NULL  
-)
+    ip_address VARBINARY(16) NOT NULL,     -- INET6_ATON(ip): 4 bytes for IPv4, 16 for IPv6; read back with INET6_NTOA
+    email VARCHAR(190) NOT NULL DEFAULT '',
+    login_attempts INT UNSIGNED NOT NULL DEFAULT 0,
+    started_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (ip_address, email),
+    KEY idx_rate_limits_started (started_at)
+) ENGINE=InnoDB;
+
+-- PHP sessions (Core\DbSessionHandler). The cookie holds only the id. exp is a unix timestamp;
+-- expired rows are removed by PHP's own cleanup. user_id is NULL until someone logs in.
+CREATE TABLE IF NOT EXISTS sessions (
+    id VARCHAR(128) NOT NULL PRIMARY KEY,
+    user_id BIGINT UNSIGNED NULL,
+    exp INT UNSIGNED NOT NULL,
+    csrf CHAR(64) NULL,
+    KEY idx_sessions_user (user_id),
+    KEY idx_sessions_exp (exp),
+    CONSTRAINT fk_sessions_user FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
+) ENGINE=InnoDB;

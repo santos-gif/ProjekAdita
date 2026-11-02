@@ -10,14 +10,22 @@ final class Session
 {
 	public const REMEMBER_SECONDS = 2592000; // 30 hari
 	public const DEFAULT_SECONDS = 43200; // 12 jam
+	/** Cookie name; Auth reads it before a session is open, so it lives here as the single source. */
+	public const NAME = 'app_session';
+
+	private static bool $handlerSet = false;
 
 	public static function start(int $lifetime = 0): void
 	{
 		if (session_status() === PHP_SESSION_ACTIVE) {
 			return;
 		}
+		if (!self::$handlerSet) {
+			session_set_save_handler(new DbSessionHandler(), true);
+			self::$handlerSet = true;
+		}
 		// Server-side data must outlive the longest cookie ("remember").
-		session_name("app_session");
+		session_name(self::NAME);
 		ini_set('session.gc_maxlifetime', (string) self::REMEMBER_SECONDS);
 		ini_set('session.use_strict_mode', '1');
 		ini_set('session.use_only_cookies', '1');

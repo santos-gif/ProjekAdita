@@ -11,7 +11,7 @@ final class Auth
 	public static function userId(): ?int
 	{
 		// Anonymous users gets rejected
-		if (session_status() !== PHP_SESSION_ACTIVE && !isset($_COOKIE[session_name()])) {
+		if (session_status() !== PHP_SESSION_ACTIVE && !isset($_COOKIE[Session::NAME])) {
 			return null;
 		}
 		Session::start();
