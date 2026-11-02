@@ -51,5 +51,4 @@ $router->add('GET', '/auth/me', [$auth, 'me']);
 $router->add('POST', '/auth/reset', [$auth, 'reset']);
 
 
-
 $router->dispatch($_SERVER['REQUEST_METHOD'], $_SERVER['REQUEST_URI'] ?? '/');

@@ -110,3 +110,8 @@ CREATE TABLE IF NOT EXISTS notifications (
     CONSTRAINT fk_notif_user FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE,
     CONSTRAINT fk_notif_project FOREIGN KEY (project_id) REFERENCES projects (id) ON DELETE CASCADE
 ) ENGINE=InnoDB;
+
+CREATE TABLE IF NOT EXISTS rate_limits (
+	ip_address VARCHAR(45) NOT NULL PRIMARY KEY
+	current_login_attempts INT(1) NOT NULL  
+)
