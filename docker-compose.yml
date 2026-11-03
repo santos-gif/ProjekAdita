@@ -49,6 +49,13 @@ services:
       DB_NAME: ${DB_NAME:?set DB_NAME in .env}
       DB_USER: ${DB_USER:?set DB_USER in .env}
       DB_PASS: ${DB_PASS:?set DB_PASS in .env}
+      # Outgoing mail (password-reset codes). Empty MAIL_HOST: development only logs the message; production refuses.
+      MAIL_HOST: ${MAIL_HOST:-}
+      MAIL_PORT: ${MAIL_PORT:-}
+      MAIL_SECURE: ${MAIL_SECURE:-}
+      MAIL_USER: ${MAIL_USER:-}
+      MAIL_PASS: ${MAIL_PASS:-}
+      MAIL_FROM: ${MAIL_FROM:-}
     depends_on:
       db:
         condition: service_healthy

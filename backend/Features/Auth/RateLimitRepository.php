@@ -6,42 +6,55 @@ namespace Features\Auth;
 
 use Core\Db;
 
-/** Failed-attempt counters in `rate_limits`, one row per (ip, email). */
+/**
+ * Attempt counters in `rate_limits`, one row per (scope, ip, email). The scope names the action ('login', 'reset');
+ * the caller supplies the limit ($max attempts within $window seconds) so each action can have its own.
+ */
 final class RateLimitRepository
 {
-	private const MAX_LOGIN_ATTEMPTS = 3;
-	private const WINDOW_SECONDS = 180;
+	/**
+	 * Lets one request at a time through for this key (waits up to 5 s), so parallel requests cannot all pass
+	 * lockedFor() before any hit() is counted. MariaDB drops the lock when the connection closes at the end of the request.
+	 */
+	public function lock(string $key): bool
+	{
+		$st = Db::pdo()->prepare('SELECT GET_LOCK(?, 5)');
+		$st->execute(['rl:' . md5($key)]);
+		return (int) $st->fetchColumn() === 1;
+	}
 
 	/** @return int|null seconds of lockout left, or null when this visitor may try */
-	public function loginLockedFor(string $ip, string $email): ?int
+	public function lockedFor(string $scope, string $ip, string $email, int $max, int $window): ?int
 	{
 		$st = Db::pdo()->prepare(
-			'SELECT ' . self::WINDOW_SECONDS . ' - TIMESTAMPDIFF(SECOND, started_at, NOW()) FROM rate_limits
-			 WHERE ip_address = INET6_ATON(?) AND email = ? AND login_attempts >= ' . self::MAX_LOGIN_ATTEMPTS . '
-			 AND started_at > NOW() - INTERVAL ' . self::WINDOW_SECONDS . ' SECOND'
+			'SELECT ' . $window . ' - TIMESTAMPDIFF(SECOND, started_at, NOW()) FROM rate_limits
+			 WHERE scope = ? AND ip_address = INET6_ATON(?) AND email = ? AND attempts >= ' . $max . '
+			 AND started_at > NOW() - INTERVAL ' . $window . ' SECOND'
 		);
-		$st->execute([$ip, $email]);
+		$st->execute([$scope, $ip, $email]);
 		$left = $st->fetchColumn();
 		return $left === false ? null : max(1, (int) $left);
 	}
 
-	/** Counts a wrong password. The 3rd one restarts the clock, so the lockout lasts a full window from that moment. */
-	public function recordLoginFailure(string $ip, string $email): void
+	/** Counts one attempt. The one that reaches $max restarts the clock, so the lockout lasts a full window from then. */
+	public function hit(string $scope, string $ip, string $email, int $max, int $window): void
 	{
 		$pdo = Db::pdo();
 		// Also what keeps the table small: rows whose window has passed are of no use any more.
-		$pdo->exec('DELETE FROM rate_limits WHERE started_at <= NOW() - INTERVAL ' . self::WINDOW_SECONDS . ' SECOND');
-		// started_at is assigned before login_attempts so that it still sees the old count.
+		$pdo->prepare('DELETE FROM rate_limits WHERE scope = ? AND started_at <= NOW() - INTERVAL ' . $window . ' SECOND')
+			->execute([$scope]);
+		// started_at is assigned before attempts so that it still sees the old count.
 		$pdo->prepare(
-			'INSERT INTO rate_limits (ip_address, email, login_attempts) VALUES (INET6_ATON(?), ?, 1)
+			'INSERT INTO rate_limits (scope, ip_address, email, attempts) VALUES (?, INET6_ATON(?), ?, 1)
 			 ON DUPLICATE KEY UPDATE
-			   started_at = IF(login_attempts + 1 >= ' . self::MAX_LOGIN_ATTEMPTS . ', NOW(), started_at),
-			   login_attempts = login_attempts + 1'
-		)->execute([$ip, $email]);
+			   started_at = IF(attempts + 1 >= ' . $max . ', NOW(), started_at),
+			   attempts = attempts + 1'
+		)->execute([$scope, $ip, $email]);
 	}
 
-	public function clearLogin(string $ip, string $email): void
+	public function clear(string $scope, string $ip, string $email): void
 	{
-		Db::pdo()->prepare('DELETE FROM rate_limits WHERE ip_address = INET6_ATON(?) AND email = ?')->execute([$ip, $email]);
+		Db::pdo()->prepare('DELETE FROM rate_limits WHERE scope = ? AND ip_address = INET6_ATON(?) AND email = ?')
+			->execute([$scope, $ip, $email]);
 	}
 }

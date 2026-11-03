@@ -111,14 +111,16 @@ CREATE TABLE IF NOT EXISTS notifications (
     CONSTRAINT fk_notif_project FOREIGN KEY (project_id) REFERENCES projects (id) ON DELETE CASCADE
 ) ENGINE=InnoDB;
 
--- Failed-attempt counters per visitor. One row per (ip, email); login_attempts counts wrong passwords,
--- started_at is when the current 3-minute window (or lockout) began. Stale rows are deleted by the code.
+-- Attempt counters per visitor, for any kind of action: scope names the action ('login', 'reset', ...).
+-- One row per (scope, ip, email). started_at is when the current window (or lockout) began; the limits
+-- themselves live in code. Stale rows are deleted by the code. A successful login deletes its row.
 CREATE TABLE IF NOT EXISTS rate_limits (
+    scope VARCHAR(30) NOT NULL,
     ip_address VARBINARY(16) NOT NULL,     -- INET6_ATON(ip): 4 bytes for IPv4, 16 for IPv6; read back with INET6_NTOA
     email VARCHAR(190) NOT NULL DEFAULT '',
-    login_attempts INT UNSIGNED NOT NULL DEFAULT 0,
+    attempts INT UNSIGNED NOT NULL DEFAULT 0,
     started_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    PRIMARY KEY (ip_address, email),
+    PRIMARY KEY (scope, ip_address, email),
     KEY idx_rate_limits_started (started_at)
 ) ENGINE=InnoDB;
 
@@ -132,4 +134,15 @@ CREATE TABLE IF NOT EXISTS sessions (
     KEY idx_sessions_user (user_id),
     KEY idx_sessions_exp (exp),
     CONSTRAINT fk_sessions_user FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
+) ENGINE=InnoDB;
+
+-- The emailed password-reset code: one row per user, the 6-digit code stored hashed.
+-- Valid for 10 minutes and 5 wrong tries (both enforced in PasswordResetRepository), then useless.
+CREATE TABLE IF NOT EXISTS password_resets (
+    user_id BIGINT UNSIGNED NOT NULL PRIMARY KEY,
+    code_hash VARCHAR(255) NOT NULL,
+    attempts TINYINT UNSIGNED NOT NULL DEFAULT 0,
+    expires_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_reset_user FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
 ) ENGINE=InnoDB;

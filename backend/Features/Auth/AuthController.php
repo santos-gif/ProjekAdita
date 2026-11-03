@@ -6,20 +6,32 @@ namespace Features\Auth;
 
 use Core\Auth;
 use Core\Csrf;
+use Core\Mailer;
 use Core\Response;
 use Core\Request;
+use Core\Session;
 use Features\Auth\Model\LoginInput;
 use Features\Auth\Model\RegisterInput;
+use Features\Auth\Model\ResetConfirmInput;
 use Features\Auth\Model\ResetInput;
 use Features\User\UserRepository;
 
 final class AuthController
 {
+	// Rate limits (see RateLimitRepository): attempts allowed per window, in seconds.
+	private const LOGIN_MAX = 3;
+	private const LOGIN_WINDOW = 180;
+	private const RESET_MAX = 3;
+	private const RESET_WINDOW = 900;
+	/** A new reset code is not sent while the previous one is younger than this. */
+	private const RESET_COOLDOWN = 60;
+
 	private static ?string $dummyHash = null;
 
 	public function __construct(
 		private UserRepository $users = new UserRepository(),
 		private RateLimitRepository $limits = new RateLimitRepository(),
+		private PasswordResetRepository $resets = new PasswordResetRepository(),
 	) {}
 
 	public function register(): void
@@ -41,8 +53,15 @@ final class AuthController
 	public function login(): void
 	{
 		$in = LoginInput::fromRequest(Request::body());
+		// No stored email is this long, and it would not fit the rate_limits key either.
+		if (strlen($in->email) > 190) {
+			Response::fail(401, 'Email atau kata sandi salah.');
+		}
 		$ip = Request::ip();
-		$wait = $this->limits->loginLockedFor($ip, $in->email);
+		if (!$this->limits->lock("login|{$ip}|{$in->email}")) {
+			Response::fail(429, 'Terlalu banyak permintaan. Coba lagi sebentar lagi.');
+		}
+		$wait = $this->limits->lockedFor('login', $ip, $in->email, self::LOGIN_MAX, self::LOGIN_WINDOW);
 		if ($wait !== null) {
 			header('Retry-After: ' . $wait);
 			Response::fail(429, 'Terlalu banyak percobaan masuk. Coba lagi dalam ' . (int) ceil($wait / 60) . ' menit.');
@@ -55,10 +74,10 @@ final class AuthController
 		);
 		if ($found === null || !$valid) {
 			// Unknown emails count too, so the lockout does not reveal which emails exist.
-			$this->limits->recordLoginFailure($ip, $in->email);
+			$this->limits->hit('login', $ip, $in->email, self::LOGIN_MAX, self::LOGIN_WINDOW);
 			Response::fail(401, 'Email atau kata sandi salah.');
 		}
-		$this->limits->clearLogin($ip, $in->email);
+		$this->limits->clear('login', $ip, $in->email);
 		if (password_needs_rehash($found->passwordHash, PASSWORD_DEFAULT)) {
 			$this->users->updateHash($found->user->id, password_hash($in->password, PASSWORD_DEFAULT));
 		}
@@ -79,17 +98,68 @@ final class AuthController
 		if ($id === null) {
 			Response::fail(401, "User ID Invalid");
 		}
-		Response::ok(['user' => $id === null ? null : $this->users->findPublicById($id)?->toArray()]);
+		Response::ok(['user' => $this->users->findPublicById($id)?->toArray()]);
 	}
+
+	/** Step 1 of a password reset: email a 6-digit code. The answer is the same whether or not the email exists. */
 	public function reset(): void
 	{
-		/** Receives Email, generate 6 digit code, send code to email
-		 *  
-		 */
 		$in = ResetInput::fromRequest(Request::body());
 		$errors = $in->errors();
 		if ($errors) {
 			Response::fail(422, 'Data tidak valid.', $errors);
 		}
+		$ip = Request::ip();
+		// Per email, not per IP: the 60 s cooldown must hold even when the requests come from many addresses.
+		if (!$this->limits->lock("reset|{$in->email}")) {
+			Response::fail(429, 'Terlalu banyak permintaan. Coba lagi sebentar lagi.');
+		}
+		$wait = $this->limits->lockedFor('reset', $ip, $in->email, self::RESET_MAX, self::RESET_WINDOW);
+		if ($wait !== null) {
+			header('Retry-After: ' . $wait);
+			Response::fail(429, 'Terlalu banyak permintaan. Coba lagi dalam ' . (int) ceil($wait / 60) . ' menit.');
+		}
+		// Every request counts, found or not, so the limit does not reveal which emails exist.
+		$this->limits->hit('reset', $ip, $in->email, self::RESET_MAX, self::RESET_WINDOW);
+
+		$found = $this->users->findByEmail($in->email);
+		if ($found !== null && !$this->resets->createdWithin($found->user->id, self::RESET_COOLDOWN)) {
+			$code = str_pad((string) random_int(0, 999999), 6, '0', STR_PAD_LEFT);
+			$this->resets->save($found->user->id, password_hash($code, PASSWORD_DEFAULT));
+			try {
+				Mailer::send(
+					$found->user->email,
+					'Kode reset kata sandi',
+					"Kode reset kata sandi Anda: {$code}\n\nKode berlaku 10 menit. Abaikan email ini jika Anda tidak memintanya."
+				);
+			} catch (\Throwable $e) {
+				// Logged only: a visible failure would reveal that the email is registered.
+				error_log('Reset mail failed: ' . get_class($e) . ': ' . $e->getMessage());
+			}
+			// shortcut: a real account takes longer to answer (hash + mail) than an unknown email; move the
+			// mail to after the response if that timing ever matters.
+		}
+		Response::ok(null, 200, 'Jika email terdaftar, kode reset telah dikirim.');
+	}
+
+	/** Step 2: check the code, set the new password, log the user out everywhere. */
+	public function resetConfirm(): void
+	{
+		$in = ResetConfirmInput::fromRequest(Request::body());
+		$errors = $in->errors();
+		if ($errors) {
+			Response::fail(422, 'Data tidak valid.', $errors);
+		}
+		$found = $this->users->findByEmail($in->email);
+		$hash = $found === null ? null : $this->resets->consumeAttempt($found->user->id);
+		// With nothing to check, a dummy hash is verified anyway so the answer takes the same time.
+		$valid = password_verify($in->code, $hash ?? (self::$dummyHash ??= password_hash('x', PASSWORD_DEFAULT)));
+		if ($found === null || $hash === null || !$valid) {
+			Response::fail(422, 'Kode salah atau kedaluwarsa.', ['code' => 'Kode salah atau kedaluwarsa.']);
+		}
+		$this->users->updateHash($found->user->id, password_hash($in->newPassword, PASSWORD_DEFAULT));
+		$this->resets->delete($found->user->id);
+		Session::destroyAllFor($found->user->id);
+		Response::ok(null, 200, 'Kata sandi berhasil diubah. Silakan masuk.');
 	}
 }

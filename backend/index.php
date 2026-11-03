@@ -49,6 +49,7 @@ $router->add('POST', '/auth/login', [$auth, 'login']);
 $router->add('POST', '/auth/logout', [$auth, 'logout']);
 $router->add('GET', '/auth/me', [$auth, 'me']);
 $router->add('POST', '/auth/reset', [$auth, 'reset']);
+$router->add('POST', '/auth/reset/confirm', [$auth, 'resetConfirm']);
 
 
 $router->dispatch($_SERVER['REQUEST_METHOD'], $_SERVER['REQUEST_URI'] ?? '/');

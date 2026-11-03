@@ -51,6 +51,12 @@ final class Session
 		session_regenerate_id(true);
 	}
 
+	/** Logs a user out everywhere (password reset): deletes every session row that belongs to them. */
+	public static function destroyAllFor(int $userId): void
+	{
+		Db::pdo()->prepare('DELETE FROM sessions WHERE user_id = ?')->execute([$userId]);
+	}
+
 	public static function destroy(): void
 	{
 		self::start();
