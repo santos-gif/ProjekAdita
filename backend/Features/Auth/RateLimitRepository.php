@@ -24,37 +24,42 @@ final class RateLimitRepository
 	}
 
 	/** @return int|null seconds of lockout left, or null when this visitor may try */
-	public function lockedFor(string $scope, string $ip, string $email, int $max, int $window): ?int
+	public function lockedFor(string $scope, string $ip, string $email, int $max_attempts): ?int
 	{
+		$now = time();
 		$st = Db::pdo()->prepare(
-			'SELECT ' . $window . ' - TIMESTAMPDIFF(SECOND, started_at, NOW()) FROM rate_limits
-			 WHERE scope = ? AND ip_address = INET6_ATON(?) AND email = ? AND attempts >= ' . $max . '
-			 AND started_at > NOW() - INTERVAL ' . $window . ' SECOND'
+			'SELECT exp - ? FROM rate_limits
+			WHERE scope = ? AND ip_address = INET6_ATON(?) AND email = ?
+			AND attempts >= ? AND exp > ?'
 		);
-		$st->execute([$scope, $ip, $email]);
+		$st->execute([$now, $scope, $ip, $email, $max_attempts, $now]);
 		$left = $st->fetchColumn();
 		return $left === false ? null : max(1, (int) $left);
 	}
 
 	/** Counts one attempt. The one that reaches $max restarts the clock, so the lockout lasts a full window from then. */
-	public function hit(string $scope, string $ip, string $email, int $max, int $window): void
+	public function hit(string $scope, string $ip, string $email, int $max, int $lockoutSeconds): void
 	{
 		$pdo = Db::pdo();
-		// Also what keeps the table small: rows whose window has passed are of no use any more.
-		$pdo->prepare('DELETE FROM rate_limits WHERE scope = ? AND started_at <= NOW() - INTERVAL ' . $window . ' SECOND')
-			->execute([$scope]);
-		// started_at is assigned before attempts so that it still sees the old count.
+		$now = time();
+		$exp = $now + $lockoutSeconds;
+		// Also what keeps the table small: expired rows (any scope) are of no use any more.
+		$pdo->prepare('DELETE FROM rate_limits WHERE exp <= ?')->execute([$now]);
+		// The same $now as the delete means no expired row reaches the update branch, and the caller's lock()
+		// serialises the same key. attempts is assigned first so exp sees the new count.
 		$pdo->prepare(
-			'INSERT INTO rate_limits (scope, ip_address, email, attempts) VALUES (?, INET6_ATON(?), ?, 1)
-			 ON DUPLICATE KEY UPDATE
-			   started_at = IF(attempts + 1 >= ' . $max . ', NOW(), started_at),
-			   attempts = attempts + 1'
-		)->execute([$scope, $ip, $email]);
+			'INSERT INTO rate_limits (scope, ip_address, email, attempts, exp)
+			VALUES (?, INET6_ATON(?), ?, 1, ?)
+			ON DUPLICATE KEY UPDATE
+				attempts = attempts + 1,
+				exp = IF(attempts >= ?, ?, exp)'
+		)->execute([$scope, $ip, $email, $exp, $max, $exp]);
 	}
 
 	public function clear(string $scope, string $ip, string $email): void
 	{
-		Db::pdo()->prepare('DELETE FROM rate_limits WHERE scope = ? AND ip_address = INET6_ATON(?) AND email = ?')
-			->execute([$scope, $ip, $email]);
+		Db::pdo()->prepare(
+			'DELETE FROM rate_limits WHERE scope = ? AND ip_address = INET6_ATON(?) AND email = ?'
+		)->execute([$scope, $ip, $email]);
 	}
 }

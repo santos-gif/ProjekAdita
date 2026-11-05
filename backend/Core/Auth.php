@@ -27,7 +27,7 @@ final class Auth
 
 	public static function login(int $userId, bool $remember): void
 	{
-		Session::regenerate($remember);
+		$remember === false ? Session::start() : Session::start(Session::REMEMBER_SECONDS);
 		$_SESSION['user_id'] = $userId;
 		$_SESSION['exp'] = time() + ($remember ? Session::REMEMBER_SECONDS : Session::DEFAULT_SECONDS);
 	}

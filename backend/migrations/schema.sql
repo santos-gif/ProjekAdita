@@ -59,7 +59,7 @@ CREATE TABLE IF NOT EXISTS project_applications (
     id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
     project_id BIGINT UNSIGNED NOT NULL,
     user_id BIGINT UNSIGNED NOT NULL,
-    desired_role VARCHAR(60) NULL,
+    desired_title VARCHAR(60) NOT NULL,
     message TEXT NULL,
     status ENUM('pending', 'accepted', 'rejected', 'withdrawn') NOT NULL DEFAULT 'pending',
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -74,7 +74,8 @@ CREATE TABLE IF NOT EXISTS project_applications (
 CREATE TABLE IF NOT EXISTS project_members (
     project_id BIGINT UNSIGNED NOT NULL,
     user_id BIGINT UNSIGNED NOT NULL,
-    role VARCHAR(60) NULL,
+    role ENUM('member', 'manager', 'owner') NOT NULL DEFAULT 'member',
+    title VARCHAR(60) NOT NULL,
     joined_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY (project_id, user_id),
     KEY idx_members_user (user_id),
@@ -112,16 +113,16 @@ CREATE TABLE IF NOT EXISTS notifications (
 ) ENGINE=InnoDB;
 
 -- Attempt counters per visitor, for any kind of action: scope names the action ('login', 'reset', ...).
--- One row per (scope, ip, email). started_at is when the current window (or lockout) began; the limits
--- themselves live in code. Stale rows are deleted by the code. A successful login deletes its row.
+-- One row per (scope, ip, email). exp is a unix timestamp: when the current window (or lockout) ends; the limits
+-- themselves live in code. Expired rows are deleted by the code. A successful login deletes its row.
 CREATE TABLE IF NOT EXISTS rate_limits (
-    scope VARCHAR(30) NOT NULL,
+    scope ENUM("login", "reset") NOT NULL,
     ip_address VARBINARY(16) NOT NULL,     -- INET6_ATON(ip): 4 bytes for IPv4, 16 for IPv6; read back with INET6_NTOA
     email VARCHAR(190) NOT NULL DEFAULT '',
     attempts INT UNSIGNED NOT NULL DEFAULT 0,
-    started_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    exp INT UNSIGNED NOT NULL,
     PRIMARY KEY (scope, ip_address, email),
-    KEY idx_rate_limits_started (started_at)
+    KEY idx_rate_limits_exp (exp)
 ) ENGINE=InnoDB;
 
 -- PHP sessions (Core\DbSessionHandler). The cookie holds only the id. exp is a unix timestamp;

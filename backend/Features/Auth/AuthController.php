@@ -19,10 +19,10 @@ use Features\User\UserRepository;
 final class AuthController
 {
 	// Rate limits (see RateLimitRepository): attempts allowed per window, in seconds.
-	private const LOGIN_MAX = 3;
-	private const LOGIN_WINDOW = 180;
-	private const RESET_MAX = 3;
-	private const RESET_WINDOW = 900;
+	private const LOGIN_MAX_ATTEMPTS = 3;
+	private const LOGIN_LOCKOUT_SECONDS = 180;
+	private const RESET_MAX_ATTEMPTS = 3;
+	private const RESET_LOCKOUT_SECONDS = 900;
 	/** A new reset code is not sent while the previous one is younger than this. */
 	private const RESET_COOLDOWN = 60;
 
@@ -53,7 +53,6 @@ final class AuthController
 	public function login(): void
 	{
 		$in = LoginInput::fromRequest(Request::body());
-		// No stored email is this long, and it would not fit the rate_limits key either.
 		if (strlen($in->email) > 190) {
 			Response::fail(401, 'Email atau kata sandi salah.');
 		}
@@ -61,7 +60,7 @@ final class AuthController
 		if (!$this->limits->lock("login|{$ip}|{$in->email}")) {
 			Response::fail(429, 'Terlalu banyak permintaan. Coba lagi sebentar lagi.');
 		}
-		$wait = $this->limits->lockedFor('login', $ip, $in->email, self::LOGIN_MAX, self::LOGIN_WINDOW);
+		$wait = $this->limits->lockedFor('login', $ip, $in->email, self::LOGIN_MAX_ATTEMPTS);
 		if ($wait !== null) {
 			header('Retry-After: ' . $wait);
 			Response::fail(429, 'Terlalu banyak percobaan masuk. Coba lagi dalam ' . (int) ceil($wait / 60) . ' menit.');
@@ -74,7 +73,7 @@ final class AuthController
 		);
 		if ($found === null || !$valid) {
 			// Unknown emails count too, so the lockout does not reveal which emails exist.
-			$this->limits->hit('login', $ip, $in->email, self::LOGIN_MAX, self::LOGIN_WINDOW);
+			$this->limits->hit('login', $ip, $in->email, self::LOGIN_MAX_ATTEMPTS, self::LOGIN_LOCKOUT_SECONDS);
 			Response::fail(401, 'Email atau kata sandi salah.');
 		}
 		$this->limits->clear('login', $ip, $in->email);
@@ -114,13 +113,13 @@ final class AuthController
 		if (!$this->limits->lock("reset|{$in->email}")) {
 			Response::fail(429, 'Terlalu banyak permintaan. Coba lagi sebentar lagi.');
 		}
-		$wait = $this->limits->lockedFor('reset', $ip, $in->email, self::RESET_MAX, self::RESET_WINDOW);
+		$wait = $this->limits->lockedFor('reset', $ip, $in->email, self::RESET_MAX_ATTEMPTS);
 		if ($wait !== null) {
 			header('Retry-After: ' . $wait);
 			Response::fail(429, 'Terlalu banyak permintaan. Coba lagi dalam ' . (int) ceil($wait / 60) . ' menit.');
 		}
 		// Every request counts, found or not, so the limit does not reveal which emails exist.
-		$this->limits->hit('reset', $ip, $in->email, self::RESET_MAX, self::RESET_WINDOW);
+		$this->limits->hit('reset', $ip, $in->email, self::RESET_MAX_ATTEMPTS, self::RESET_LOCKOUT_SECONDS);
 
 		$found = $this->users->findByEmail($in->email);
 		if ($found !== null && !$this->resets->createdWithin($found->user->id, self::RESET_COOLDOWN)) {
