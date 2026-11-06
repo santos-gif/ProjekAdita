@@ -22,15 +22,15 @@ services:
       # imported only on the very first start, while the volume is still empty
       - ./backend/migrations/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
     healthcheck:
-      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      test: [ "CMD", "healthcheck.sh", "--connect", "--innodb_initialized" ]
       interval: 10s
       timeout: 5s
       retries: 10
       start_period: 30s
-    security_opt: ["no-new-privileges:true"]
+    security_opt: [ "no-new-privileges:true" ]
     logging:
       driver: json-file
-      options: {max-size: 10m, max-file: "3"}
+      options: { max-size: 10m, max-file: "3" }
     deploy:
       resources:
         limits:
@@ -61,20 +61,20 @@ services:
         condition: service_healthy
     # lock-down: read-only filesystem (only the tmpfs folders are writable) and no extra privileges
     read_only: true
-    tmpfs: [/tmp, /var/run/apache2, /var/lock/apache2]
-    cap_drop: [ALL]
+    tmpfs: [ /tmp, /var/run/apache2, /var/lock/apache2 ]
+    cap_drop: [ ALL ]
     # Apache starts as root and then switches to www-data, which needs these two.
-    cap_add: [SETUID, SETGID]
-    security_opt: ["no-new-privileges:true"]
+    cap_add: [ SETUID, SETGID ]
+    security_opt: [ "no-new-privileges:true" ]
     healthcheck:
-      test: ["CMD", "php", "-r", "exit(@file_get_contents('http://127.0.0.1:8080/api/v1/health') === false ? 1 : 0);"]
+      test: [ "CMD", "php", "-r", "exit(@file_get_contents('http://127.0.0.1:8080/api/v1/health') === false ? 1 : 0);" ]
       interval: 15s
       timeout: 5s
       retries: 5
       start_period: 10s
     logging:
       driver: json-file
-      options: {max-size: 10m, max-file: "3"}
+      options: { max-size: 10m, max-file: "3" }
     deploy:
       resources:
         limits:
@@ -91,48 +91,21 @@ services:
       api:
         condition: service_healthy
     read_only: true
-    tmpfs: [/tmp]
-    cap_drop: [ALL]
-    security_opt: ["no-new-privileges:true"]
+    tmpfs: [ /tmp ]
+    cap_drop: [ ALL ]
+    security_opt: [ "no-new-privileges:true" ]
     healthcheck:
-      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:8080/"]
+      test: [ "CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:8080/" ]
       interval: 15s
       timeout: 5s
       retries: 5
     logging:
       driver: json-file
-      options: {max-size: 10m, max-file: "3"}
+      options: { max-size: 10m, max-file: "3" }
     deploy:
       resources:
         limits:
           memory: 64m
-
-configs:
-  nginx_conf:
-    content: |
-      server {
-        listen 8080;
-        root /usr/share/nginx/html;
-        index index.html;
-        server_tokens off;
-
-        add_header X-Content-Type-Options nosniff always;
-        add_header X-Frame-Options DENY always;
-        add_header Referrer-Policy same-origin always;
-        add_header Content-Security-Policy "default-src 'self'; img-src 'self' data: blob:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; script-src 'self' 'unsafe-inline';" always;
-
-        location /api/ {
-          proxy_pass http://api:8080;
-          proxy_set_header Host $$host;
-          proxy_set_header X-Forwarded-For $$remote_addr;
-          proxy_set_header X-Forwarded-Proto $$scheme;
-        }
-        location ~ ^/(login|register|reset|dashboard|add-project)/?$$ {
-          try_files /app/pages/$$1/$$1.html =404;
-        }
-        location = /favicon.ico { return 204; }
-        location / { try_files $$uri $$uri/ =404; }
-      }
 
 networks:
   internal:
