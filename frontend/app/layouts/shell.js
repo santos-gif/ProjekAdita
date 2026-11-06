@@ -3,10 +3,9 @@ import { initials, firstName } from '../../shared/helpers/format.js';
 
 const NAV_ITEMS = [
   { key: 'dashboard', label: 'Dashboard', href: '/dashboard' },
-  { key: 'add-project', label: 'Add Project', href: '/add-project' },
-  { key: 'projek-saya', label: 'Projek Saya', badge: 'Segera hadir' },
-  { key: 'projek-diikuti', label: 'Projek yang diikuti', badge: 'Segera hadir' },
-  { key: 'lamaran', label: 'Lamaran', badge: 'Segera hadir' },
+  { key: 'projek-saya', label: 'Projek Saya', href: '/projek-saya' },
+  { key: 'projek-diikuti', label: 'Projek yang diikuti', badge: 'SEGERA HADIR' },
+  { key: 'lamaran', label: 'Lamaran', badge: 'SEGERA HADIR' },
 ];
 
 function buildNavItem(item, activeKey) {
@@ -119,13 +118,16 @@ export function mountShell(root, { user, active = 'dashboard', onLogout, onSearc
   });
 
   const sidebarHead = el('div', { class: 'sidebar-head' },
-    el('span', { class: 'sidebar-title', text: 'ProjekAdita' }),
+    el('div', { class: 'sidebar-head-info' },
+      el('span', { class: 'sidebar-title', text: 'Menu Navigasi' }),
+      el('span', { class: 'sidebar-badge-active', text: 'Aktif' })
+    ),
     closeBtn
   );
 
   const items = [...NAV_ITEMS];
   if (user.role === 'admin') {
-    items.push({ key: 'projek-request', label: 'Projek Request', badge: 'Segera hadir' });
+    items.push({ key: 'projek-request', label: 'Permintaan Projek', badge: 'SEGERA HADIR' });
   }
 
   const navList = el('ul', { class: 'nav' }, ...items.map((it) => buildNavItem(it, active)));

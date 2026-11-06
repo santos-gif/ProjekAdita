@@ -2,6 +2,7 @@ import { logout } from '../../../features/auth/auth.api.js';
 import { requireUser } from '../../../features/auth/auth.session.js';
 import { setMessage } from '../../../shared/helpers/dom.js';
 import { mountShell } from '../../layouts/shell.js';
+import { ALL_MASTER_TAGS } from '../../../features/projects/tags.data.js';
 
 const notification = document.getElementById('notification');
 function notify(text, kind = 'info') {
@@ -18,7 +19,7 @@ try {
   if (user) {
     mountShell(document.getElementById('shell'), {
       user,
-      active: 'add-project',
+      active: 'projek-saya',
       onLogout: async () => {
         try {
           await logout();
@@ -34,7 +35,7 @@ try {
   // If running without backend session in dev or direct access
   mountShell(document.getElementById('shell'), {
     user: { name: 'Pascal Edu', email: 'pascal@example.com', role: 'user' },
-    active: 'add-project',
+    active: 'projek-saya',
     onLogout: () => location.replace('/login'),
   });
 }
@@ -54,24 +55,32 @@ thumbnailBox.addEventListener('keydown', (e) => {
 
 let thumbnailDataUrl = null;
 
-thumbnailInput.addEventListener('change', async () => {
-  const file = thumbnailInput.files?.[0];
-  if (!file) return;
+async function renderThumbnailPreview(fileOrUrl) {
+  if (typeof fileOrUrl === 'string') {
+    thumbnailDataUrl = fileOrUrl;
+    const img = document.createElement('img');
+    img.alt = 'Preview thumbnail';
+    img.src = fileOrUrl;
+    img.style.width = '100%';
+    img.style.height = '100%';
+    img.style.objectFit = 'cover';
+    thumbnailPreview.replaceChildren(img);
+    return;
+  }
 
+  const file = fileOrUrl;
   if (file.size > 2 * 1024 * 1024) {
     notify('Ukuran file melebihi 2MB. Silakan pilih gambar yang lebih kecil.', 'error');
     thumbnailInput.value = '';
     return;
   }
 
-  // Read base64 data for storage/upload
   const reader = new FileReader();
   reader.onload = (e) => {
     thumbnailDataUrl = e.target.result;
   };
   reader.readAsDataURL(file);
 
-  // Render preview safely using Canvas (bypasses CSP restrictions on data: URLs)
   try {
     let bitmap;
     if (window.createImageBitmap) {
@@ -115,20 +124,32 @@ thumbnailInput.addEventListener('change', async () => {
       notify('Gagal menampilkan preview gambar.', 'error');
     }
   }
+}
+
+thumbnailInput.addEventListener('change', () => {
+  const file = thumbnailInput.files?.[0];
+  if (file) renderThumbnailPreview(file);
 });
 
-// ---------- Tags Handling (All Gray) ----------
+// ---------- Tags Handling (Hanya dari Daftar Resmi) ----------
 const tagsBox = document.getElementById('tags-box');
 const tagInput = document.getElementById('tag-input');
+const tagsDropdown = document.getElementById('tags-dropdown');
 
-function createTagElement(tagName) {
-  const cleanTag = tagName.replace(/^#/, '').trim();
-  if (!cleanTag) return;
+function getSelectedTags() {
+  return [...tagsBox.querySelectorAll('.tag-pill')].map(p => p.dataset.tag.toLowerCase());
+}
 
-  // Check duplicate
-  const existingTags = [...tagsBox.querySelectorAll('.tag-pill')].map(p => p.dataset.tag.toLowerCase());
-  if (existingTags.includes(cleanTag.toLowerCase())) {
+function clearAllTags() {
+  tagsBox.querySelectorAll('.tag-pill').forEach(p => p.remove());
+}
+
+function addTagElement(officialTagName) {
+  const cleanTag = officialTagName.trim();
+  const selected = getSelectedTags();
+  if (selected.includes(cleanTag.toLowerCase())) {
     tagInput.value = '';
+    tagsDropdown.hidden = true;
     return;
   }
 
@@ -153,6 +174,8 @@ function createTagElement(tagName) {
   pill.append(textSpan, removeBtn);
   tagsBox.insertBefore(pill, tagInput);
   tagInput.value = '';
+  tagsDropdown.hidden = true;
+  notify('', 'info');
 }
 
 // Bind existing remove buttons
@@ -163,15 +186,127 @@ tagsBox.querySelectorAll('.tag-remove').forEach((btn) => {
   });
 });
 
+// Dropdown Autocomplete Search
+function showTagSuggestions(query) {
+  const cleanQ = query.trim().toLowerCase();
+  if (!cleanQ) {
+    tagsDropdown.hidden = true;
+    tagsDropdown.replaceChildren();
+    return;
+  }
+
+  const selected = getSelectedTags();
+  // Filter tag resmi yang belum dipilih dan cocok dengan kata kunci (substring search)
+  let matched = ALL_MASTER_TAGS.filter(t => 
+    !selected.includes(t.name.toLowerCase()) && 
+    t.name.toLowerCase().includes(cleanQ)
+  );
+
+  tagsDropdown.replaceChildren();
+
+  if (matched.length === 0) {
+    const emptyNotice = document.createElement('div');
+    emptyNotice.className = 'tags-dropdown-empty';
+    emptyNotice.textContent = `Tidak ditemukan tag resmi untuk "${query}". Tag hanya bisa dipilih dari daftar resmi.`;
+    tagsDropdown.appendChild(emptyNotice);
+    tagsDropdown.hidden = false;
+    return;
+  }
+
+  // Smart sort: prioritaskan tag yang diawali query, lalu alfabetis
+  matched.sort((a, b) => {
+    const aName = a.name.toLowerCase();
+    const bName = b.name.toLowerCase();
+    const aStarts = aName.startsWith(cleanQ);
+    const bStarts = bName.startsWith(cleanQ);
+    if (aStarts && !bStarts) return -1;
+    if (!aStarts && bStarts) return 1;
+    return a.name.localeCompare(b.name);
+  });
+
+  // Tambahkan header info jumlah hasil
+  const headerEl = document.createElement('div');
+  headerEl.className = 'tags-dropdown-header';
+  headerEl.innerHTML = `
+    <span>Ditemukan <strong class="tags-dropdown-count">${matched.length}</strong> tag resmi</span>
+    <span style="font-size: 0.6875rem; color: #94a3b8;">Gulir untuk melihat semua ↓</span>
+  `;
+  tagsDropdown.appendChild(headerEl);
+
+  // Tampilkan SEMUA tag yang cocok (tanpa limit slice) sehingga seluruh elemen terlihat
+  matched.forEach((item, index) => {
+    const option = document.createElement('div');
+    option.className = `tags-dropdown-item ${index === 0 ? 'is-selected' : ''}`;
+    option.setAttribute('role', 'option');
+
+    // Highlight text matching query
+    const escapedQ = cleanQ.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const regex = new RegExp('(' + escapedQ + ')', 'gi');
+    const highlightedName = item.name.replace(regex, '<mark>$1</mark>');
+
+    option.innerHTML = `
+      <span class="dropdown-tag-name">#${highlightedName}</span>
+      <span class="dropdown-tag-category">${item.category}</span>
+    `;
+
+    option.addEventListener('mousedown', (e) => {
+      e.preventDefault();
+      addTagElement(item.name);
+      tagInput.focus();
+    });
+
+    tagsDropdown.appendChild(option);
+  });
+
+  tagsDropdown.hidden = false;
+}
+
+tagInput.addEventListener('input', (e) => {
+  showTagSuggestions(e.target.value);
+});
+
 tagInput.addEventListener('keydown', (e) => {
-  if (e.key === 'Enter' || e.key === ',') {
+  if (e.key === 'Enter') {
     e.preventDefault();
-    createTagElement(tagInput.value);
+    const query = tagInput.value.trim().toLowerCase();
+    if (!query) return;
+
+    // Cek apakah ada yang cocok persis di master tags
+    const exactMatch = ALL_MASTER_TAGS.find(t => t.name.toLowerCase() === query);
+    if (exactMatch) {
+      addTagElement(exactMatch.name);
+      return;
+    }
+
+    // Jika tidak persis, ambil pilihan teratas di dropdown jika ada
+    const firstOption = tagsDropdown.querySelector('.tags-dropdown-item');
+    if (firstOption) {
+      const selectedItem = ALL_MASTER_TAGS.find(t => 
+        !getSelectedTags().includes(t.name.toLowerCase()) && 
+        t.name.toLowerCase().includes(query)
+      );
+      if (selectedItem) {
+        addTagElement(selectedItem.name);
+        return;
+      }
+    }
+
+    // Jika tidak ada yang cocok di daftar resmi, tolak dan beri tahu pengguna
+    notify(`Tag "${tagInput.value.trim()}" tidak ditemukan dalam daftar tag resmi. Silakan pilih tag dari daftar saran yang tersedia.`, 'error');
+  } else if (e.key === 'Escape') {
+    tagsDropdown.hidden = true;
   } else if (e.key === 'Backspace' && !tagInput.value) {
     const pills = tagsBox.querySelectorAll('.tag-pill');
     if (pills.length > 0) {
       pills[pills.length - 1].remove();
     }
+  }
+});
+
+// Sembunyikan dropdown jika klik di luar
+document.addEventListener('click', (e) => {
+  if (!tagsBox.contains(e.target) && !tagsDropdown.contains(e.target)) {
+    tagsDropdown.hidden = true;
   }
 });
 
@@ -194,17 +329,65 @@ function updateDescCounter() {
 descInput.addEventListener('input', updateDescCounter);
 updateDescCounter();
 
+// ---------- Edit Mode Detection ----------
+const urlParams = new URLSearchParams(location.search);
+const editId = urlParams.get('edit');
+let editingProject = null;
+
+const form = document.getElementById('add-project-form');
+const nameInput = document.getElementById('project-name');
+const nameError = document.getElementById('name-error');
+const bannerTitle = document.querySelector('.banner-title');
+const btnUpload = document.getElementById('btn-upload');
+
+if (editId) {
+  try {
+    const list = JSON.parse(localStorage.getItem('projekadita_projects') || '[]');
+    editingProject = list.find(p => String(p.id) === String(editId));
+
+    if (editingProject) {
+      document.title = 'Edit Proyek - ProjekAdita';
+      if (bannerTitle) bannerTitle.textContent = 'Edit Pengajuan Proyek';
+      if (btnUpload) {
+        btnUpload.innerHTML = '<span class="upload-arrow" aria-hidden="true">✓</span> Simpan Perubahan';
+      }
+
+      // Populate form values
+      nameInput.value = editingProject.title || '';
+      descInput.value = editingProject.description || '';
+      document.getElementById('project-requirements').value = editingProject.requirements || '';
+      if (editingProject.selection_method) {
+        document.getElementById('selection-method').value = editingProject.selection_method;
+      }
+
+      // Populate tags
+      clearAllTags();
+      if (Array.isArray(editingProject.tags)) {
+        editingProject.tags.forEach(t => addTagElement(t));
+      }
+
+      // Populate thumbnail if exists
+      if (editingProject.thumbnail) {
+        renderThumbnailPreview(editingProject.thumbnail);
+      }
+
+      updateDescCounter();
+      notify(`Mode edit: Anda sedang memperbarui proyek "${editingProject.title}".`, 'info');
+    }
+  } catch (err) {
+    console.warn('Gagal memuat data proyek untuk edit:', err);
+  }
+}
+
 // ---------- Save Draft ----------
 const btnDraft = document.getElementById('btn-draft');
 btnDraft.addEventListener('click', () => {
-  const form = document.getElementById('add-project-form');
   const tags = [...tagsBox.querySelectorAll('.tag-pill')].map(p => p.dataset.tag);
   const draft = {
     title: form.title.value.trim(),
     description: form.description.value.trim(),
     requirements: form.requirements.value.trim(),
     selection_method: form.selection_method.value,
-    max_members: form.max_members.value,
     tags,
     thumbnail: thumbnailDataUrl,
     savedAt: new Date().toISOString()
@@ -213,22 +396,7 @@ btnDraft.addEventListener('click', () => {
   notify('Draf proyek berhasil disimpan.', 'info');
 });
 
-// Load draft if available
-try {
-  const savedDraft = localStorage.getItem('projekadita_draft');
-  if (savedDraft) {
-    const d = JSON.parse(savedDraft);
-    if (d.savedAt) {
-      // Draft exists
-    }
-  }
-} catch { /* ignore */ }
-
-// ---------- Form Submit (Upload) ----------
-const form = document.getElementById('add-project-form');
-const nameInput = document.getElementById('project-name');
-const nameError = document.getElementById('name-error');
-
+// ---------- Form Submit (Upload / Update) ----------
 form.addEventListener('submit', async (e) => {
   e.preventDefault();
 
@@ -236,7 +404,6 @@ form.addEventListener('submit', async (e) => {
   const description = descInput.value.trim();
   const requirements = document.getElementById('project-requirements').value.trim();
   const selectionMethod = document.getElementById('selection-method').value;
-  const maxMembers = parseInt(document.getElementById('quota-input').value, 10) || 4;
   const tags = [...tagsBox.querySelectorAll('.tag-pill')].map(p => p.dataset.tag);
 
   let hasError = false;
@@ -259,31 +426,63 @@ form.addEventListener('submit', async (e) => {
 
   if (hasError) return;
 
-  const projectData = {
-    id: Date.now(),
-    title,
-    description,
-    requirements,
-    selection_method: selectionMethod,
-    max_members: maxMembers,
-    tags,
-    thumbnail: thumbnailDataUrl,
-    createdAt: new Date().toISOString()
-  };
-
-  // Save to localStorage list of projects
   try {
     const list = JSON.parse(localStorage.getItem('projekadita_projects') || '[]');
-    list.unshift(projectData);
-    localStorage.setItem('projekadita_projects', JSON.stringify(list));
-    localStorage.removeItem('projekadita_draft');
+
+    if (editingProject) {
+      // Update existing project
+      const index = list.findIndex(p => String(p.id) === String(editingProject.id));
+      const updatedProject = {
+        ...editingProject,
+        title,
+        description,
+        requirements,
+        selection_method: selectionMethod,
+        tags,
+        thumbnail: thumbnailDataUrl !== null ? thumbnailDataUrl : editingProject.thumbnail,
+        status: 'pending', // Tetap pending karena admin belum ada yang approve
+        updatedAt: new Date().toISOString()
+      };
+
+      if (index !== -1) {
+        list[index] = updatedProject;
+      } else {
+        list.unshift(updatedProject);
+      }
+
+      localStorage.setItem('projekadita_projects', JSON.stringify(list));
+      notify('Perubahan proyek berhasil disimpan! Mengalihkan ke Projek Saya...', 'info');
+    } else {
+      // Create new project
+      const projectData = {
+        id: Date.now(),
+        title,
+        category: 'Riset Terapan',
+        description,
+        requirements,
+        selection_method: selectionMethod,
+        status: 'pending', // Semua projek yang dibuat masih pending karena belum ada admin
+        members: '1/4 Anggota Terisi',
+        members_count: 1,
+        max_members: 4,
+        tags,
+        thumbnail: thumbnailDataUrl,
+        timeAgo: 'Baru saja',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      };
+
+      list.unshift(projectData);
+      localStorage.setItem('projekadita_projects', JSON.stringify(list));
+      localStorage.removeItem('projekadita_draft');
+      notify('Proyek berhasil diajukan dan sedang menunggu persetujuan admin (pending). Mengalihkan ke Projek Saya...', 'info');
+    }
+
+    setTimeout(() => {
+      location.replace('/projek-saya');
+    }, 1200);
   } catch (err) {
-    console.warn('Could not save to localStorage:', err);
+    console.warn('Gagal menyimpan ke localStorage:', err);
+    notify('Terjadi kesalahan saat menyimpan proyek.', 'error');
   }
-
-  notify('Proyek berhasil diupload dan dipublikasikan! Mengalihkan ke dashboard...', 'info');
-
-  setTimeout(() => {
-    location.replace('/dashboard');
-  }, 1200);
 });

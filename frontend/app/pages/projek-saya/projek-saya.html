@@ -1,0 +1,142 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Projek Saya - ProjekAdita</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/shared/styles/tokens.css">
+  <link rel="stylesheet" href="/shared/styles/base.css">
+  <link rel="stylesheet" href="/shared/styles/components.css">
+  <link rel="stylesheet" href="/app/pages/projek-saya/projek-saya.css">
+  <script type="module" src="/app/pages/projek-saya/projek-saya.js"></script>
+</head>
+<body>
+  <a class="skip" href="#main">Lewati ke konten</a>
+  <div id="shell"></div>
+
+  <div class="app-layout">
+    <aside id="sidebar" class="sidebar" aria-label="Menu navigasi"></aside>
+
+    <main class="page my-projects-page" id="main" tabindex="-1">
+      <noscript><p class="notice">Halaman ini membutuhkan JavaScript.</p></noscript>
+      <div id="notification" class="notice" role="status" hidden></div>
+
+      <div class="projects-container">
+        <!-- Header Section -->
+        <header class="projects-header">
+          <div class="header-titles">
+            <h1 class="page-title">Projek Saya</h1>
+            <p class="page-subtitle">Kelola dan pantau status proyek kolaborasi yang Anda buat.</p>
+          </div>
+
+          <div class="header-actions">
+            <a href="/add-project" class="btn-create-project" id="btn-add-project">
+              <span class="plus-icon" aria-hidden="true">+</span> Tambah Proyek
+            </a>
+
+            <div class="filter-tabs" role="tablist" aria-label="Filter status proyek">
+              <button type="button" class="tab-pill is-active" data-filter="all" role="tab" aria-selected="true" id="tab-all">
+                Semua (<span id="count-all">0</span>)
+              </button>
+              <button type="button" class="tab-pill" data-filter="approved" role="tab" aria-selected="false" id="tab-approved">
+                Disetujui (<span id="count-approved">0</span>)
+              </button>
+              <button type="button" class="tab-pill" data-filter="pending" role="tab" aria-selected="false" id="tab-pending">
+                Pending (<span id="count-pending">0</span>)
+              </button>
+            </div>
+          </div>
+        </header>
+
+        <div class="header-divider" aria-hidden="true"></div>
+
+        <!-- Project Cards List -->
+        <section id="projects-list" class="projects-list" aria-label="Daftar proyek saya">
+          <!-- Diisi secara dinamis oleh JavaScript -->
+        </section>
+
+        <!-- Empty State (hidden by default) -->
+        <div id="empty-state" class="empty-state" hidden>
+          <div class="empty-state-icon">📂</div>
+          <h2 class="empty-state-title">Belum ada proyek</h2>
+          <p class="empty-state-desc">Anda belum memiliki proyek dengan status ini. Mulai sekarang dengan membuat proyek baru.</p>
+          <a href="/add-project" class="btn-create-project">+ Buat Proyek Baru</a>
+        </div>
+
+        <!-- Footer / Pagination -->
+        <footer class="projects-footer">
+          <div id="pagination-info" class="pagination-info">Menampilkan 0 dari 0 proyek aktif</div>
+          <nav class="pagination-controls" aria-label="Navigasi halaman">
+            <button type="button" class="page-btn page-btn-prev" disabled>Sebelumnya</button>
+            <button type="button" class="page-btn page-btn-num is-active" aria-current="page">1</button>
+            <button type="button" class="page-btn page-btn-next" disabled>Selanjutnya</button>
+          </nav>
+        </footer>
+      </div>
+
+      <!-- Detail Modal Dialog -->
+      <dialog id="project-detail-dialog" class="detail-dialog">
+        <div class="dialog-content">
+          <div class="dialog-header">
+            <h2 id="modal-title" class="dialog-title">Rincian Proyek</h2>
+            <button type="button" class="dialog-close-btn" id="modal-close-btn" aria-label="Tutup rincian">✕</button>
+          </div>
+          <div class="dialog-body">
+            <div class="dialog-meta-row">
+              <span id="modal-category" class="card-cat-badge">Kategori</span>
+              <span id="modal-status" class="status-badge">Status</span>
+              <span id="modal-time" class="dialog-time">Waktu</span>
+            </div>
+            <div class="dialog-section">
+              <h3 class="dialog-section-label">Deskripsi Proyek</h3>
+              <p id="modal-desc" class="dialog-desc-text"></p>
+            </div>
+            <div class="dialog-section" id="modal-req-section">
+              <h3 class="dialog-section-label">Persyaratan Anggota</h3>
+              <p id="modal-req" class="dialog-desc-text"></p>
+            </div>
+            <div class="dialog-section">
+              <h3 class="dialog-section-label">Metode Seleksi</h3>
+              <p id="modal-selection" class="dialog-desc-text"></p>
+            </div>
+            <div class="dialog-section">
+              <h3 class="dialog-section-label">Anggota Tim</h3>
+              <p id="modal-members" class="dialog-desc-text"></p>
+            </div>
+            <div class="dialog-section">
+              <h3 class="dialog-section-label">Tag Proyek</h3>
+              <div id="modal-tags" class="dialog-tags-wrap"></div>
+            </div>
+          </div>
+          <div class="dialog-footer">
+            <div class="dialog-footer-left">
+              <button type="button" class="btn-card-action btn-card-cancel" id="modal-btn-cancel" hidden>Batalkan Pengajuan</button>
+              <a href="#" class="btn-card-action btn-card-edit" id="modal-btn-edit" hidden>Edit Proyek</a>
+            </div>
+            <div class="dialog-footer-right">
+              <button type="button" class="btn-secondary" id="modal-dismiss-btn">Tutup</button>
+            </div>
+          </div>
+        </div>
+      </dialog>
+
+      <!-- Confirmation Dialog Pembatalan Proyek -->
+      <dialog id="cancel-confirm-dialog" class="confirm-dialog">
+        <div class="confirm-dialog-content">
+          <h2 class="confirm-dialog-title">Batalkan Pengajuan Proyek?</h2>
+          <p class="confirm-dialog-desc" id="cancel-confirm-desc">
+            Apakah Anda yakin ingin membatalkan pengajuan proyek ini? Proyek yang dibatalkan akan dihapus dari daftar antrean persetujuan.
+          </p>
+          <div class="confirm-dialog-actions">
+            <button type="button" class="btn-secondary" id="btn-abort-cancel">Tidak, Kembali</button>
+            <button type="button" class="btn-danger" id="btn-proceed-cancel">Ya, Batalkan Proyek</button>
+          </div>
+        </div>
+      </dialog>
+    </main>
+  </div>
+</body>
+</html>
