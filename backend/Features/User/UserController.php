@@ -17,10 +17,23 @@ final class UserController
 	{
 		$in = ChangePasswordInput::fromRequest(Request::body());
 		$errors = $in->errors();
+		if ($errors) {
+			Response::fail(401, "Invalid Inputs", $errors);
+		}
+		$id = Auth::userId();
+
+		$found = $this->users->findById($id);
+	}
+	public function getUser(): void
+	{
 		$id = Auth::userId();
 		if ($id === null || !is_int($id)) {
-			Response::fail(401, "Invalid user ID", $errors);
+			Response::fail(401, "Invalid user ID");
 		}
-		$found = $this->users->findById($id);
+		$publicUser = $this->users->findPublicById($id);
+		if ($publicUser === null) {
+			Response::fail(404, "User not found");
+		}
+		Response::ok($publicUser, 200, "Successfully retrieved user");
 	}
 }

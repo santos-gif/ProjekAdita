@@ -27,11 +27,14 @@ CREATE TABLE IF NOT EXISTS users (
 CREATE TABLE IF NOT EXISTS projects (
     id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
     owner_id BIGINT UNSIGNED NOT NULL,
-    title VARCHAR(120) NOT NULL,
+    project_name VARCHAR(120) NOT NULL,
+    thumbnail_url VARCHAR(255) NULL,
     description LONGTEXT NOT NULL,
     requirements TEXT NULL,
     status ENUM('pending_moderation', 'pending_admin', 'published', 'rejected')
         NOT NULL DEFAULT 'pending_moderation',
+    selection_method ENUM('Kurasi Portofolio & CV', 'Wawancara Langsung', 'Tes Teknis', 'First Come First Served') 
+        NOT NULL DEFAULT 'Kurasi Portofolio & CV'
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     published_at TIMESTAMP NULL,  -- set when the admin publishes
     KEY idx_projects_status_published (status, published_at),

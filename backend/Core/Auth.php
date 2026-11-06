@@ -22,7 +22,11 @@ final class Auth
 			Session::destroy();
 			return null;
 		}
-		return (int) $_SESSION['user_id'];
+		$id = (int) $_SESSION['user_id'];
+		if ($id === null) {
+			Response::fail(401, "User ID Invalid");
+		}
+		return $id;
 	}
 
 	public static function login(int $userId, bool $remember): void
