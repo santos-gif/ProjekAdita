@@ -95,7 +95,7 @@ final class AuthController
 		// No cookie = anonymous visitor: do not create a session for them.
 		$id = Auth::userId();
 		if ($id === null) {
-			Response::fail(401, "User ID Invalid");
+			Response::fail(401, 'Sesi tidak valid atau telah berakhir.');
 		}
 		Response::ok(['user' => $this->users->findPublicById($id)?->toArray()]);
 	}

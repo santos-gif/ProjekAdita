@@ -14,7 +14,7 @@ final class Request
 		$contentType = $_SERVER['CONTENT_TYPE'] ?? $_SERVER['HTTP_CONTENT_TYPE'] ?? '';
 		// stripos returns 0 (falsy) when the type starts with application/json, so compare with === false.
 		if (stripos($contentType, 'application/json') === false) {
-			Response::fail(415, 'Unsupported Media Type.');
+			Response::fail(415, 'Tipe media tidak didukung.');
 		}
 		$raw = (string) stream_get_contents(fopen('php://input', 'rb'), $limit + 1);
 		if (strlen($raw) > $limit) {
