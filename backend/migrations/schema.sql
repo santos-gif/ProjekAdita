@@ -34,7 +34,7 @@ CREATE TABLE IF NOT EXISTS projects (
     status ENUM('pending_moderation', 'pending_admin', 'published', 'rejected')
         NOT NULL DEFAULT 'pending_moderation',
     selection_method ENUM('Kurasi Portofolio & CV', 'Wawancara Langsung', 'Tes Teknis', 'First Come First Served') 
-        NOT NULL DEFAULT 'Kurasi Portofolio & CV'
+        NOT NULL DEFAULT 'Kurasi Portofolio & CV',
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     published_at TIMESTAMP NULL,  -- set when the admin publishes
     KEY idx_projects_status_published (status, published_at),
