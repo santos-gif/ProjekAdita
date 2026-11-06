@@ -13,7 +13,7 @@ final readonly class AddProjectInput
 	) {}
 
 	/** @param array<string,mixed> $in decoded JSON body */
-	public static function fromRequest(array $in)
+	public static function fromRequest(array $in): self
 	{
 		return new self("", "");
 	}
