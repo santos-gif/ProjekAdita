@@ -29,4 +29,25 @@ final class Db
 			]
 		);
 	}
+
+	/**
+	 * Runs $work in a transaction: everything it does is saved together, or nothing is when it throws.
+	 * $work receives the PDO connection and may return a value, which this method returns.
+	 * @template T
+	 * @param callable(PDO):T $work
+	 * @return T
+	 */
+	public static function transaction(callable $work): mixed
+	{
+		$pdo = self::pdo();
+		$pdo->beginTransaction();
+		try {
+			$result = $work($pdo);
+			$pdo->commit();
+			return $result;
+		} catch (\Throwable $e) {
+			$pdo->rollBack();
+			throw $e;
+		}
+	}
 }

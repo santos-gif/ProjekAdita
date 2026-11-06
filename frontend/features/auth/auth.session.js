@@ -1,8 +1,14 @@
+import { ApiError } from '../../shared/lib/http.js';
 import { me } from './auth.api.js';
 
-/** @returns {Promise<import('./auth.types.js').User|null>} */
+/** @returns {Promise<import('./auth.types.js').User|null>} null when nobody is logged in (the API answers 401) */
 export async function getUser() {
-  return (await me()).user ?? null;
+  try {
+    return (await me()).user ?? null;
+  } catch (err) {
+    if (err instanceof ApiError && err.status === 401) return null;
+    throw err;
+  }
 }
 
 /** Only same-origin relative paths: one leading '/', no '//' or '/\', no control chars. */

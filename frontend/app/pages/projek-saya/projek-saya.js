@@ -2,6 +2,7 @@ import { logout } from '../../../features/auth/auth.api.js';
 import { requireUser } from '../../../features/auth/auth.session.js';
 import { setMessage } from '../../../shared/helpers/dom.js';
 import { mountShell } from '../../layouts/shell.js';
+import { listMine, deleteProject } from '../../../features/projects/projects.api.js';
 
 const notification = document.getElementById('notification');
 function notify(text, kind = 'info') {
@@ -18,8 +19,7 @@ let currentUser = null;
 try {
   currentUser = await requireUser();
 } catch (err) {
-  console.warn('Fallback offline/dev user:', err);
-  currentUser = { name: 'Pascal Edu', email: 'pascal@example.com', role: 'user' };
+  notify(err.message, 'error');
 }
 
 if (currentUser) {
@@ -38,67 +38,19 @@ if (currentUser) {
   });
 }
 
-// Data awal default (sinkron dengan mockup referensi)
-const DEFAULT_PROJECTS = [
-  {
-    id: 1,
-    title: 'Cyber Security: Shielding Against Cyber Threats',
-    category: 'Riset Terapan',
-    timeAgo: 'Diperbarui 2 hari lalu',
-    description: 'Proyek riset dan implementasi sistem pertahanan siber untuk mitigasi serangan kampus berbasis analitik lalu lintas data secara real-time.',
-    members: '4/4 Anggota Terisi',
-    tags: ['Cyber Security', 'Network Security'],
-    status: 'approved', // Disetujui
-    selection_method: 'Kurasi Portofolio & CV',
-    requirements: '- Mahasiswa aktif Informatika/Sistem Informasi\n- Memahami konsep dasar Jaringan Komputer & Firewall\n- Memiliki motivasi belajar dan kerja sama tim yang baik',
-    thumbnailType: 'cyber'
-  },
-  {
-    id: 2,
-    title: 'Artificial Intelligence Presentation System',
-    category: 'Tugas Akhir',
-    timeAgo: 'Diajukan kemarin',
-    description: 'Pembangunan sistem otomatisasi presentasi berbasis model kecerdasan buatan untuk kurikulum pembelajaran kampus terintegrasi.',
-    members: '2/4 Anggota Terisi',
-    tags: ['Artificial Intelligence', 'Machine Learning'],
-    status: 'pending', // Menunggu persetujuan karena bagian admin belum ada
-    selection_method: 'Wawancara Langsung',
-    requirements: '- Tertarik pada Natural Language Processing & Computer Vision\n- Familiar dengan Python & Web Framework\n- Berkomitmen menyelesaikan proyek',
-    thumbnailType: 'ai'
-  }
-];
-
-// Helper membaca data projects dari localStorage
-function loadProjects() {
-  try {
-    const raw = localStorage.getItem('projekadita_projects');
-    if (!raw) {
-      localStorage.setItem('projekadita_projects', JSON.stringify(DEFAULT_PROJECTS));
-      return [...DEFAULT_PROJECTS];
-    }
-    const parsed = JSON.parse(raw);
-    if (!Array.isArray(parsed) || parsed.length === 0) {
-      localStorage.setItem('projekadita_projects', JSON.stringify(DEFAULT_PROJECTS));
-      return [...DEFAULT_PROJECTS];
-    }
-    return parsed;
-  } catch (err) {
-    console.warn('Gagal membaca localStorage projekadita_projects:', err);
-    return [...DEFAULT_PROJECTS];
-  }
-}
-
-function saveProjects(projects) {
-  try {
-    localStorage.setItem('projekadita_projects', JSON.stringify(projects));
-  } catch (err) {
-    console.warn('Gagal menyimpan ke localStorage:', err);
-  }
-}
-
-let allProjects = loadProjects();
+let allProjects = [];
 let currentFilter = 'all'; // 'all' | 'approved' | 'pending'
 let searchQuery = '';
+
+// My projects come from the backend once; the tabs, the counts and the search then work on this list.
+async function refresh() {
+  try {
+    allProjects = await listMine();
+  } catch (err) {
+    notify(err.message, 'error');
+  }
+  renderProjects();
+}
 
 // DOM Elements
 const listContainer = document.getElementById('projects-list');
@@ -158,18 +110,21 @@ cancelDialog?.addEventListener('click', (e) => {
   if (e.target === cancelDialog) closeCancelDialog();
 });
 
-btnProceedCancel?.addEventListener('click', () => {
+btnProceedCancel?.addEventListener('click', async () => {
   if (!projectToCancel) return;
   const targetId = projectToCancel.id;
   const targetTitle = projectToCancel.title;
 
-  allProjects = allProjects.filter(p => String(p.id) !== String(targetId));
-  saveProjects(allProjects);
-
   closeCancelDialog();
   closeDetailDialog();
 
-  renderProjects();
+  try {
+    await deleteProject(targetId);
+  } catch (err) {
+    notify(err.message, 'error');
+    return;
+  }
+  await refresh();
   notify(`Pengajuan proyek "${targetTitle}" berhasil dibatalkan.`, 'info');
 });
 
@@ -279,7 +234,6 @@ function renderThumbnail(project) {
 
 // Render Card List
 function renderProjects() {
-  allProjects = loadProjects();
 
   const totalCount = allProjects.length;
   const approvedCount = allProjects.filter(p => p.status === 'approved').length;
@@ -466,5 +420,5 @@ if (searchInput) {
   });
 }
 
-// Initial Render
-renderProjects();
+// Initial render
+await refresh();

@@ -14,6 +14,8 @@ use Features\Auth\Model\LoginInput;
 use Features\Auth\Model\RegisterInput;
 use Features\Auth\Model\ResetConfirmInput;
 use Features\Auth\Model\ResetInput;
+use Features\Notifications\NotificationRepository;
+use Features\Notifications\NotificationType;
 use Features\User\UserRepository;
 
 final class AuthController
@@ -32,6 +34,7 @@ final class AuthController
 		private UserRepository $users = new UserRepository(),
 		private RateLimitRepository $limits = new RateLimitRepository(),
 		private PasswordResetRepository $resets = new PasswordResetRepository(),
+		private NotificationRepository $notifications = new NotificationRepository(),
 	) {}
 
 	public function register(): void
@@ -159,6 +162,11 @@ final class AuthController
 		$this->users->updateHash($found->user->id, password_hash($in->newPassword, PASSWORD_DEFAULT));
 		$this->resets->delete($found->user->id);
 		Session::destroyAllFor($found->user->id);
+		$this->notifications->add(
+			$found->user->id,
+			NotificationType::PASSWORD_CHANGED,
+			'Kata sandi akun Anda diatur ulang. Jika ini bukan Anda, segera hubungi admin.',
+		);
 		Response::ok(null, 200, 'Kata sandi berhasil diubah. Silakan masuk.');
 	}
 }

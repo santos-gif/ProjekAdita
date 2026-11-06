@@ -58,6 +58,12 @@ final class Session
 		Db::pdo()->prepare('DELETE FROM sessions WHERE user_id = ?')->execute([$userId]);
 	}
 
+	/** Logs a user out of every OTHER device (a password change): deletes their session rows except the one of this request. */
+	public static function destroyOthersFor(int $userId): void
+	{
+		Db::pdo()->prepare('DELETE FROM sessions WHERE user_id = ? AND id <> ?')->execute([$userId, session_id()]);
+	}
+
 	public static function destroy(): void
 	{
 		self::start();

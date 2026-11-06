@@ -29,6 +29,12 @@ final class Auth
 		return $id;
 	}
 
+	/** For endpoints that need a login: the user's id, or a 401 answer right here, so the caller never sees null. */
+	public static function requireUserId(): int
+	{
+		return self::userId() ?? Response::fail(401, 'Silakan masuk terlebih dahulu.');
+	}
+
 	public static function login(int $userId, bool $remember): void
 	{
 		$remember === false ? Session::start() : Session::start(Session::REMEMBER_SECONDS);

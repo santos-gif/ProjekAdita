@@ -28,15 +28,18 @@ CREATE TABLE IF NOT EXISTS projects (
     id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
     owner_id BIGINT UNSIGNED NOT NULL,
     project_name VARCHAR(120) NOT NULL,
-    thumbnail_url VARCHAR(255) NULL,
+    thumbnail_url VARCHAR(255) NULL,  -- '/uploads/<random>.<ext>': the file sits in the shared uploads volume, nginx serves it
     description LONGTEXT NOT NULL,
     requirements TEXT NULL,
-    status ENUM('pending_moderation', 'pending_admin', 'published', 'rejected')
+    -- draft: the owner's saved-but-not-submitted form (one per owner, never listed); the rest is the review flow.
+    status ENUM('draft', 'pending_moderation', 'pending_admin', 'published', 'rejected')
         NOT NULL DEFAULT 'pending_moderation',
-    selection_method ENUM('Kurasi Portofolio & CV', 'Wawancara Langsung', 'Tes Teknis', 'First Come First Served') 
-        NOT NULL DEFAULT 'Kurasi Portofolio & CV'
+    selection_method ENUM('Kurasi Portofolio & CV', 'Wawancara Langsung', 'Tes Teknis', 'First Come First Served')
+        NOT NULL DEFAULT 'Kurasi Portofolio & CV',
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     published_at TIMESTAMP NULL,  -- set when the admin publishes
+    accepting_applications BOOLEAN NOT NULL DEFAULT 1,  -- the owner closes this to stop NEW applications
     KEY idx_projects_status_published (status, published_at),
     KEY idx_projects_owner (owner_id),
     CONSTRAINT fk_projects_owner FOREIGN KEY (owner_id) REFERENCES users (id) ON DELETE RESTRICT
@@ -45,6 +48,7 @@ CREATE TABLE IF NOT EXISTS projects (
 CREATE TABLE IF NOT EXISTS tags (
     id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
     name VARCHAR(50) NOT NULL,
+    category VARCHAR(40) NOT NULL DEFAULT '',  -- study programme the tag belongs to; the official list is seeded at the end of this file
     UNIQUE KEY uq_tags_name (name)
 ) ENGINE=InnoDB;
 
@@ -57,7 +61,9 @@ CREATE TABLE IF NOT EXISTS project_tags (
     CONSTRAINT fk_ptags_tag FOREIGN KEY (tag_id) REFERENCES tags (id) ON DELETE CASCADE
 ) ENGINE=InnoDB;
 
--- A request to join a project; one per user per project.
+-- A request to join a project; one row per user per project, reused when the user applies again.
+-- status: pending; accepted (the applicant became a member); withdrawn (the applicant withdrew, or an owner/manager
+-- declined: decided_by tells which; the user MAY apply again); rejected = BANNED from this project (cannot apply again).
 CREATE TABLE IF NOT EXISTS project_applications (
     id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
     project_id BIGINT UNSIGNED NOT NULL,
@@ -67,10 +73,12 @@ CREATE TABLE IF NOT EXISTS project_applications (
     status ENUM('pending', 'accepted', 'rejected', 'withdrawn') NOT NULL DEFAULT 'pending',
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     decided_at TIMESTAMP NULL,
+    decided_by BIGINT UNSIGNED NULL,  -- the owner/manager who accepted, declined or banned; NULL while pending or when the applicant withdrew
     UNIQUE KEY uq_application_once (project_id, user_id),
     KEY idx_applications_user (user_id),
     CONSTRAINT fk_app_project FOREIGN KEY (project_id) REFERENCES projects (id) ON DELETE CASCADE,
-    CONSTRAINT fk_app_user FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
+    CONSTRAINT fk_app_user FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE,
+    CONSTRAINT fk_app_decider FOREIGN KEY (decided_by) REFERENCES users (id) ON DELETE SET NULL
 ) ENGINE=InnoDB;
 
 -- Everyone on a project, the owner included (the owner's row is created together with the project).
@@ -84,6 +92,42 @@ CREATE TABLE IF NOT EXISTS project_members (
     KEY idx_members_user (user_id),
     CONSTRAINT fk_member_project FOREIGN KEY (project_id) REFERENCES projects (id) ON DELETE CASCADE,
     CONSTRAINT fk_member_user FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
+) ENGINE=InnoDB;
+
+-- A manager asks the OWNER to make a plain member a manager (the owner may also do it directly).
+CREATE TABLE IF NOT EXISTS project_promotion_requests (
+    id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    project_id BIGINT UNSIGNED NOT NULL,
+    member_id BIGINT UNSIGNED NOT NULL,       -- the member who would become a manager
+    requested_by BIGINT UNSIGNED NOT NULL,    -- the manager who asks
+    status ENUM('pending', 'approved', 'denied') NOT NULL DEFAULT 'pending',
+    decided_by BIGINT UNSIGNED NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    decided_at TIMESTAMP NULL,
+    KEY idx_promotions_project (project_id, status),
+    CONSTRAINT fk_promo_project FOREIGN KEY (project_id) REFERENCES projects (id) ON DELETE CASCADE,
+    CONSTRAINT fk_promo_member FOREIGN KEY (member_id) REFERENCES users (id) ON DELETE CASCADE,
+    CONSTRAINT fk_promo_requester FOREIGN KEY (requested_by) REFERENCES users (id) ON DELETE CASCADE,
+    CONSTRAINT fk_promo_decider FOREIGN KEY (decided_by) REFERENCES users (id) ON DELETE SET NULL
+) ENGINE=InnoDB;
+
+-- A user reports a project. The moderators see it first: they dismiss it or forward it to the admins; an admin
+-- dismisses it or takes the project down (every report of that project then becomes 'actioned').
+CREATE TABLE IF NOT EXISTS project_reports (
+    id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    project_id BIGINT UNSIGNED NOT NULL,
+    reporter_id BIGINT UNSIGNED NOT NULL,
+    reason TEXT NOT NULL,
+    status ENUM('open', 'forwarded', 'dismissed', 'actioned') NOT NULL DEFAULT 'open',
+    handled_by BIGINT UNSIGNED NULL,
+    note TEXT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    handled_at TIMESTAMP NULL,
+    KEY idx_reports_status (status, created_at),
+    KEY idx_reports_project (project_id, reporter_id),
+    CONSTRAINT fk_report_project FOREIGN KEY (project_id) REFERENCES projects (id) ON DELETE CASCADE,
+    CONSTRAINT fk_report_reporter FOREIGN KEY (reporter_id) REFERENCES users (id) ON DELETE CASCADE,
+    CONSTRAINT fk_report_handler FOREIGN KEY (handled_by) REFERENCES users (id) ON DELETE SET NULL
 ) ENGINE=InnoDB;
 
 -- One row per moderator or admin decision; a rejection must carry a reason.
@@ -150,3 +194,159 @@ CREATE TABLE IF NOT EXISTS password_resets (
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT fk_reset_user FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
 ) ENGINE=InnoDB;
+
+-- The official tag list (Universitas Pradita study programmes); a project may only use these.
+-- Generated from the old frontend/features/projects/tags.data.js: unique by name, first category wins.
+INSERT IGNORE INTO tags (name, category) VALUES
+    ('Digital Business', 'Management'),
+    ('Township Business', 'Management'),
+    ('Creativepreneurship', 'Management'),
+    ('Digital Marketing', 'Management'),
+    ('Brand Management', 'Management'),
+    ('Business Strategy', 'Management'),
+    ('Entrepreneurship', 'Management'),
+    ('Business Analytics', 'Management'),
+    ('Content Creation', 'Management'),
+    ('Investment Analysis', 'Management'),
+    ('Real Estate Development', 'Management'),
+    ('Financial Management', 'Management'),
+    ('Artificial Intelligence', 'Information Technology'),
+    ('Cyber Security', 'Information Technology'),
+    ('Big Data & IoT Apps Development', 'Information Technology'),
+    ('Machine Learning', 'Information Technology'),
+    ('Deep Learning', 'Information Technology'),
+    ('Data Science', 'Information Technology'),
+    ('Data Engineering', 'Information Technology'),
+    ('Natural Language Processing', 'Information Technology'),
+    ('Computer Vision', 'Information Technology'),
+    ('Digital Forensics', 'Information Technology'),
+    ('Penetration Testing', 'Information Technology'),
+    ('Network Security', 'Information Technology'),
+    ('Software Engineering', 'Information Technology'),
+    ('Web Development', 'Information Technology'),
+    ('Mobile App Development', 'Information Technology'),
+    ('UI/UX Design', 'Information Technology'),
+    ('Human-Computer Interaction', 'Information Technology'),
+    ('Internet of Things (IoT)', 'Information Technology'),
+    ('Embedded Systems', 'Information Technology'),
+    ('Culinary Arts', 'Culinary Arts'),
+    ('Patisserie Arts', 'Culinary Arts'),
+    ('Indonesian Cuisine', 'Culinary Arts'),
+    ('Asian Cuisine', 'Culinary Arts'),
+    ('Western Cuisine', 'Culinary Arts'),
+    ('Food Innovation', 'Culinary Arts'),
+    ('Food Styling', 'Culinary Arts'),
+    ('Food Presentation', 'Culinary Arts'),
+    ('Pastry & Bakery', 'Culinary Arts'),
+    ('Kitchen Operations', 'Culinary Arts'),
+    ('Food Entrepreneurship', 'Culinary Arts'),
+    ('Recipe Development', 'Culinary Arts'),
+    ('Auditing', 'Accounting'),
+    ('Taxation', 'Accounting'),
+    ('Digital Accounting', 'Accounting'),
+    ('Financial Accounting', 'Accounting'),
+    ('Financial Reporting', 'Accounting'),
+    ('Financial Analysis', 'Accounting'),
+    ('Internal Controls', 'Accounting'),
+    ('Risk Management', 'Accounting'),
+    ('Accounting Information Systems', 'Accounting'),
+    ('Enterprise Resource Planning (ERP)', 'Accounting'),
+    ('Business Process Auditing', 'Accounting'),
+    ('Tax Compliance', 'Accounting'),
+    ('Visual Creative', 'Visual Communication Design'),
+    ('Visual Interactive', 'Visual Communication Design'),
+    ('Graphic Design', 'Visual Communication Design'),
+    ('Visual Storytelling', 'Visual Communication Design'),
+    ('Branding & Visual Identity', 'Visual Communication Design'),
+    ('Advertising & Campaign Design', 'Visual Communication Design'),
+    ('Digital Illustration', 'Visual Communication Design'),
+    ('Video Production', 'Visual Communication Design'),
+    ('Animation & Motion Graphics', 'Visual Communication Design'),
+    ('3D Animation', 'Visual Communication Design'),
+    ('Game Design', 'Visual Communication Design'),
+    ('Character Design', 'Visual Communication Design'),
+    ('Packaging Design', 'Visual Communication Design'),
+    ('Digital Media', 'Visual Communication Design'),
+    ('Visual Merchandising', 'Visual Communication Design'),
+    ('Photography', 'Visual Communication Design'),
+    ('Property Development', 'Architecture'),
+    ('Technology Innovation', 'Architecture'),
+    ('Architectural Design', 'Architecture'),
+    ('Computational Design', 'Architecture'),
+    ('Sustainable Architecture', 'Architecture'),
+    ('Universal Design', 'Architecture'),
+    ('Contemporary Architecture', 'Architecture'),
+    ('Site Planning', 'Architecture'),
+    ('Building Technology', 'Architecture'),
+    ('Smart Building Systems', 'Architecture'),
+    ('Construction Management', 'Architecture'),
+    ('Building Economics', 'Architecture'),
+    ('Architectural Visualization', 'Architecture'),
+    ('Building Information Modeling (BIM)', 'Architecture'),
+    ('Information System Governance', 'Business Information System'),
+    ('Enterprise System', 'Business Information System'),
+    ('Business Intelligence', 'Business Information System'),
+    ('Data Analytics & Visualization', 'Business Information System'),
+    ('Systems Analysis', 'Business Information System'),
+    ('Information System Development', 'Business Information System'),
+    ('IT Audit', 'Business Information System'),
+    ('ERP Implementation', 'Business Information System'),
+    ('Business Process Management', 'Business Information System'),
+    ('Decision Support Systems', 'Business Information System'),
+    ('Information Security Management', 'Business Information System'),
+    ('Database Management', 'Business Information System'),
+    ('Structural Engineering', 'Civil Engineering'),
+    ('Quantity Surveyor & Project Cost Control', 'Civil Engineering'),
+    ('Construction Engineering Management', 'Civil Engineering'),
+    ('Construction Materials', 'Civil Engineering'),
+    ('Structural Analysis', 'Civil Engineering'),
+    ('Infrastructure Development', 'Civil Engineering'),
+    ('Transportation Engineering', 'Civil Engineering'),
+    ('Water Resources Engineering', 'Civil Engineering'),
+    ('Sanitation & Drainage', 'Civil Engineering'),
+    ('Construction Scheduling', 'Civil Engineering'),
+    ('Construction Quality Management', 'Civil Engineering'),
+    ('Geotechnical Engineering', 'Civil Engineering'),
+    ('Construction Cost Estimation', 'Civil Engineering'),
+    ('Tourism & Events', 'Hospitality & Tourism'),
+    ('Hotel Operations', 'Hospitality & Tourism'),
+    ('Culinary Business', 'Hospitality & Tourism'),
+    ('Tourism Management', 'Hospitality & Tourism'),
+    ('Event Management', 'Hospitality & Tourism'),
+    ('Destination Development', 'Hospitality & Tourism'),
+    ('Hotel Management', 'Hospitality & Tourism'),
+    ('Front Office Operations', 'Hospitality & Tourism'),
+    ('Housekeeping', 'Hospitality & Tourism'),
+    ('Food & Beverage Service', 'Hospitality & Tourism'),
+    ('Food Cost Control', 'Hospitality & Tourism'),
+    ('Sustainable Tourism', 'Hospitality & Tourism'),
+    ('Travel Experience Design', 'Hospitality & Tourism'),
+    ('Hospitality Entrepreneurship', 'Hospitality & Tourism'),
+    ('Residential', 'Interior Design'),
+    ('Hospitality & Commercial Space', 'Interior Design'),
+    ('Interior Space Planning', 'Interior Design'),
+    ('Furniture Design', 'Interior Design'),
+    ('Lighting Design', 'Interior Design'),
+    ('Retail Design', 'Interior Design'),
+    ('Office Design', 'Interior Design'),
+    ('Hospitality Interior Design', 'Interior Design'),
+    ('Exhibition & Gallery Design', 'Interior Design'),
+    ('Universal & Inclusive Design', 'Interior Design'),
+    ('Smart Living', 'Interior Design'),
+    ('Sustainable Interior Design', 'Interior Design'),
+    ('Material & Finishing Design', 'Interior Design'),
+    ('Interior Visualization', 'Interior Design'),
+    ('Urban Design', 'Urban Planning'),
+    ('Estate Management', 'Urban Planning'),
+    ('Smart City', 'Urban Planning'),
+    ('Sustainable Urban Development', 'Urban Planning'),
+    ('Land Use Planning', 'Urban Planning'),
+    ('Housing & Settlement Planning', 'Urban Planning'),
+    ('Urban Mobility', 'Urban Planning'),
+    ('Transportation Planning', 'Urban Planning'),
+    ('Public Space Design', 'Urban Planning'),
+    ('Community Development', 'Urban Planning'),
+    ('Property Market Analysis', 'Urban Planning'),
+    ('Urban Infrastructure', 'Urban Planning'),
+    ('Environmental Planning', 'Urban Planning'),
+    ('Regional Development', 'Urban Planning');

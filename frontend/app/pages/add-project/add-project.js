@@ -2,7 +2,7 @@ import { logout } from '../../../features/auth/auth.api.js';
 import { requireUser } from '../../../features/auth/auth.session.js';
 import { setMessage } from '../../../shared/helpers/dom.js';
 import { mountShell } from '../../layouts/shell.js';
-import { ALL_MASTER_TAGS } from '../../../features/projects/tags.data.js';
+import { fetchTags, getProject, getDraft, saveDraft, createProject, updateProject } from '../../../features/projects/projects.api.js';
 
 const notification = document.getElementById('notification');
 function notify(text, kind = 'info') {
@@ -32,12 +32,15 @@ try {
     });
   }
 } catch (err) {
-  // If running without backend session in dev or direct access
-  mountShell(document.getElementById('shell'), {
-    user: { name: 'Pascal Edu', email: 'pascal@example.com', role: 'user' },
-    active: 'projek-saya',
-    onLogout: () => location.replace('/login'),
-  });
+  notify(err.message, 'error');
+}
+
+// The official tags come from the backend (the tag picker only offers these).
+let ALL_MASTER_TAGS = [];
+try {
+  ALL_MASTER_TAGS = await fetchTags();
+} catch (err) {
+  notify(err.message, 'error');
 }
 
 // ---------- Thumbnail Upload & Safe Canvas Preview ----------
@@ -329,7 +332,7 @@ function updateDescCounter() {
 descInput.addEventListener('input', updateDescCounter);
 updateDescCounter();
 
-// ---------- Edit Mode Detection ----------
+// ---------- Edit Mode / Draft ----------
 const urlParams = new URLSearchParams(location.search);
 const editId = urlParams.get('edit');
 let editingProject = null;
@@ -340,60 +343,80 @@ const nameError = document.getElementById('name-error');
 const bannerTitle = document.querySelector('.banner-title');
 const btnUpload = document.getElementById('btn-upload');
 
+function fillForm(project) {
+  nameInput.value = project.title || '';
+  descInput.value = project.description || '';
+  document.getElementById('project-requirements').value = project.requirements || '';
+  if (project.selection_method) {
+    document.getElementById('selection-method').value = project.selection_method;
+  }
+  clearAllTags();
+  (project.tags || []).forEach(t => addTagElement(t));
+  if (project.thumbnail) {
+    renderThumbnailPreview(project.thumbnail);
+  }
+  updateDescCounter();
+}
+
 if (editId) {
   try {
-    const list = JSON.parse(localStorage.getItem('projekadita_projects') || '[]');
-    editingProject = list.find(p => String(p.id) === String(editId));
-
-    if (editingProject) {
-      document.title = 'Edit Proyek - ProjekAdita';
-      if (bannerTitle) bannerTitle.textContent = 'Edit Pengajuan Proyek';
-      if (btnUpload) {
-        btnUpload.innerHTML = '<span class="upload-arrow" aria-hidden="true">✓</span> Simpan Perubahan';
-      }
-
-      // Populate form values
-      nameInput.value = editingProject.title || '';
-      descInput.value = editingProject.description || '';
-      document.getElementById('project-requirements').value = editingProject.requirements || '';
-      if (editingProject.selection_method) {
-        document.getElementById('selection-method').value = editingProject.selection_method;
-      }
-
-      // Populate tags
-      clearAllTags();
-      if (Array.isArray(editingProject.tags)) {
-        editingProject.tags.forEach(t => addTagElement(t));
-      }
-
-      // Populate thumbnail if exists
-      if (editingProject.thumbnail) {
-        renderThumbnailPreview(editingProject.thumbnail);
-      }
-
-      updateDescCounter();
-      notify(`Mode edit: Anda sedang memperbarui proyek "${editingProject.title}".`, 'info');
+    editingProject = await getProject(editId);
+    document.title = 'Edit Proyek - ProjekAdita';
+    if (bannerTitle) bannerTitle.textContent = 'Edit Pengajuan Proyek';
+    if (btnUpload) {
+      btnUpload.innerHTML = '<span class="upload-arrow" aria-hidden="true">✓</span> Simpan Perubahan';
+    }
+    fillForm(editingProject);
+    notify(`Mode edit: Anda sedang memperbarui proyek "${editingProject.title}".`, 'info');
+  } catch (err) {
+    // Not mine, or gone: do not let the form turn into "create a new project" by accident.
+    btnUpload.disabled = true;
+    notify(err.message, 'error');
+  }
+} else {
+  // My saved draft (if any) comes back into the form; submitting a project uses it up.
+  try {
+    const draft = await getDraft();
+    if (draft) {
+      fillForm(draft);
+      notify('Draf proyek dimuat. Lanjutkan mengisi lalu ajukan.', 'info');
     }
   } catch (err) {
-    console.warn('Gagal memuat data proyek untuk edit:', err);
+    notify(err.message, 'error');
   }
+}
+
+// What the backend gets. A new image goes up as a data URL; the URL of an image the backend already
+// stores is sent back as it is, which means "keep it" (and, for a draft's image, "use it for this project").
+function formPayload() {
+  const payload = {
+    title: nameInput.value.trim(),
+    description: descInput.value.trim(),
+    requirements: document.getElementById('project-requirements').value.trim(),
+    selection_method: document.getElementById('selection-method').value,
+    tags: [...tagsBox.querySelectorAll('.tag-pill')].map(p => p.dataset.tag),
+  };
+  if (thumbnailDataUrl) payload.thumbnail = thumbnailDataUrl;
+  return payload;
+}
+
+// 422 answers carry {field: message}; the two fields with their own spot on the form get it there.
+function showError(err) {
+  const fields = err.errors || {};
+  nameError.textContent = fields.title || '';
+  descError.textContent = fields.description || '';
+  notify(fields.tags || fields.thumbnail || fields.requirements || fields.selection_method || err.message, 'error');
 }
 
 // ---------- Save Draft ----------
 const btnDraft = document.getElementById('btn-draft');
-btnDraft.addEventListener('click', () => {
-  const tags = [...tagsBox.querySelectorAll('.tag-pill')].map(p => p.dataset.tag);
-  const draft = {
-    title: form.title.value.trim(),
-    description: form.description.value.trim(),
-    requirements: form.requirements.value.trim(),
-    selection_method: form.selection_method.value,
-    tags,
-    thumbnail: thumbnailDataUrl,
-    savedAt: new Date().toISOString()
-  };
-  localStorage.setItem('projekadita_draft', JSON.stringify(draft));
-  notify('Draf proyek berhasil disimpan.', 'info');
+btnDraft.addEventListener('click', async () => {
+  try {
+    await saveDraft(formPayload());
+    notify('Draf proyek berhasil disimpan.', 'info');
+  } catch (err) {
+    showError(err);
+  }
 });
 
 // ---------- Form Submit (Upload / Update) ----------
@@ -402,9 +425,6 @@ form.addEventListener('submit', async (e) => {
 
   const title = nameInput.value.trim();
   const description = descInput.value.trim();
-  const requirements = document.getElementById('project-requirements').value.trim();
-  const selectionMethod = document.getElementById('selection-method').value;
-  const tags = [...tagsBox.querySelectorAll('.tag-pill')].map(p => p.dataset.tag);
 
   let hasError = false;
 
@@ -426,63 +446,20 @@ form.addEventListener('submit', async (e) => {
 
   if (hasError) return;
 
+  btnUpload.disabled = true;
   try {
-    const list = JSON.parse(localStorage.getItem('projekadita_projects') || '[]');
-
     if (editingProject) {
-      // Update existing project
-      const index = list.findIndex(p => String(p.id) === String(editingProject.id));
-      const updatedProject = {
-        ...editingProject,
-        title,
-        description,
-        requirements,
-        selection_method: selectionMethod,
-        tags,
-        thumbnail: thumbnailDataUrl !== null ? thumbnailDataUrl : editingProject.thumbnail,
-        status: 'pending', // Tetap pending karena admin belum ada yang approve
-        updatedAt: new Date().toISOString()
-      };
-
-      if (index !== -1) {
-        list[index] = updatedProject;
-      } else {
-        list.unshift(updatedProject);
-      }
-
-      localStorage.setItem('projekadita_projects', JSON.stringify(list));
+      await updateProject(editingProject.id, formPayload());
       notify('Perubahan proyek berhasil disimpan! Mengalihkan ke Projek Saya...', 'info');
     } else {
-      // Create new project
-      const projectData = {
-        id: Date.now(),
-        title,
-        category: 'Riset Terapan',
-        description,
-        requirements,
-        selection_method: selectionMethod,
-        status: 'pending', // Semua projek yang dibuat masih pending karena belum ada admin
-        members: '1/4 Anggota Terisi',
-        members_count: 1,
-        max_members: 4,
-        tags,
-        thumbnail: thumbnailDataUrl,
-        timeAgo: 'Baru saja',
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
-      };
-
-      list.unshift(projectData);
-      localStorage.setItem('projekadita_projects', JSON.stringify(list));
-      localStorage.removeItem('projekadita_draft');
+      await createProject(formPayload());
       notify('Proyek berhasil diajukan dan sedang menunggu persetujuan admin (pending). Mengalihkan ke Projek Saya...', 'info');
     }
-
     setTimeout(() => {
       location.replace('/projek-saya');
     }, 1200);
   } catch (err) {
-    console.warn('Gagal menyimpan ke localStorage:', err);
-    notify('Terjadi kesalahan saat menyimpan proyek.', 'error');
+    showError(err);
+    btnUpload.disabled = false;
   }
 });

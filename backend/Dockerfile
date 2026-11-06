@@ -29,6 +29,10 @@ EOF
 
 COPY php.ini /usr/local/etc/php/conf.d/zz-app.ini
 
+# Project thumbnails land here. Compose mounts a volume on this folder; an empty volume takes over the
+# folder's owner (www-data) from the image, so Apache may write to it even with a read-only root filesystem.
+RUN mkdir -p /var/www/app/uploads && chown www-data:www-data /var/www/app/uploads
+
 # What may enter the image is decided by .dockerignore, not by a list here.
 WORKDIR /var/www/app
 COPY . .
