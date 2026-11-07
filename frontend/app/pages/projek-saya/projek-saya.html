@@ -47,6 +47,9 @@
               <button type="button" class="tab-pill" data-filter="pending" role="tab" aria-selected="false" id="tab-pending">
                 Pending (<span id="count-pending">0</span>)
               </button>
+              <button type="button" class="tab-pill" data-filter="rejected" role="tab" aria-selected="false" id="tab-rejected">
+                Ditolak (<span id="count-rejected">0</span>)
+              </button>
             </div>
           </div>
         </header>
@@ -89,6 +92,10 @@
               <span id="modal-category" class="card-cat-badge">Kategori</span>
               <span id="modal-status" class="status-badge">Status</span>
               <span id="modal-time" class="dialog-time">Waktu</span>
+            </div>
+            <div class="dialog-section" id="modal-reject-section" hidden>
+              <h3 class="dialog-section-label">Alasan Penolakan</h3>
+              <p id="modal-reject" class="dialog-desc-text"></p>
             </div>
             <div class="dialog-section">
               <h3 class="dialog-section-label">Deskripsi Proyek</h3>

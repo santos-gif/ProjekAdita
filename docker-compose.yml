@@ -83,7 +83,7 @@ services:
         limits:
           memory: 256m
 
-  # Website (nginx), built from frontend/Dockerfile. Serves the pages and forwards /api to the api container.
+  # Website (Apache), built from frontend/Dockerfile. Serves the pages and forwards /api to the api container.
   frontend:
     build: ./frontend
     restart: unless-stopped
@@ -98,6 +98,8 @@ services:
     volumes:
       - uploads:/uploads:ro
     cap_drop: [ALL]
+    # Apache starts as root and then switches to daemon, which needs these two.
+    cap_add: [SETUID, SETGID]
     security_opt: ["no-new-privileges:true"]
     healthcheck:
       test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:8080/"]

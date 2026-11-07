@@ -19,6 +19,9 @@ export async function logout() {
 /** @returns {Promise<{user: User|null}>} */
 export const me = () => get('/auth/me');
 
-/** Currently always rejects with status 501 (decision #4). */
-export const reset = (email, newPassword, confirmPassword) =>
-  post('/auth/reset', { email, newPassword, confirmPassword });
+/** Step 1 of a reset: always succeeds; a 6-digit code is emailed when the address is registered. */
+export const requestReset = (email) => post('/auth/reset', { email });
+
+/** Step 2: the code from the email plus the new password. Ends every session of that account. */
+export const confirmReset = (email, code, newPassword, confirmNewPassword) =>
+  post('/auth/reset/confirm', { email, code, newPassword, confirmNewPassword });

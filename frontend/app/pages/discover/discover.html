@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Jelajahi Proyek - ProjekAdita</title>
+  <link rel="stylesheet" href="/shared/styles/tokens.css">
+  <link rel="stylesheet" href="/shared/styles/base.css">
+  <link rel="stylesheet" href="/shared/styles/components.css">
+  <script type="module" src="/app/pages/discover/discover.js"></script>
+</head>
+<body>
+  <a class="skip" href="#main">Lewati ke konten</a>
+  <div id="shell"></div>
+  <div class="app-layout">
+    <aside id="sidebar" class="sidebar" aria-label="Menu navigasi"></aside>
+    <main class="page" id="main" tabindex="-1">
+      <noscript><p class="notice">Halaman ini membutuhkan JavaScript.</p></noscript>
+      <div id="notification" class="notice" role="status" hidden></div>
+      <h1>Jelajahi proyek</h1>
+
+      <form id="filters" class="toolbar">
+        <div class="field">
+          <label for="keyword">Kata kunci</label>
+          <input id="keyword" name="q" type="text" autocomplete="off">
+        </div>
+        <div class="field">
+          <label for="tags">Tag (pisahkan dengan koma)</label>
+          <input id="tags" name="tags" type="text" list="tag-list" autocomplete="off">
+          <datalist id="tag-list"></datalist>
+        </div>
+        <div class="field">
+          <label for="selection_method">Metode seleksi</label>
+          <select id="selection_method" name="selection_method">
+            <option value="">Semua</option>
+            <option>Kurasi Portofolio &amp; CV</option>
+            <option>Wawancara Langsung</option>
+            <option>Tes Teknis</option>
+            <option>First Come First Served</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="study_program">Program studi pemilik</label>
+          <input id="study_program" name="study_program" type="text" autocomplete="off">
+        </div>
+        <div class="field">
+          <label for="sort">Urutkan</label>
+          <select id="sort" name="sort">
+            <option value="newest">Terbaru</option>
+            <option value="members">Anggota terbanyak</option>
+          </select>
+        </div>
+        <label class="check"><input type="checkbox" name="open"> Hanya yang menerima lamaran</label>
+        <button class="btn" type="submit">Cari</button>
+      </form>
+
+      <div id="results" class="item-list"></div>
+      <div id="pager" class="pager"></div>
+    </main>
+  </div>
+</body>
+</html>

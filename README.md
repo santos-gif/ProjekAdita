@@ -7,7 +7,7 @@ frontend HTML/CSS/JavaScript murni. Tanpa Node.js dan Composer. Dijalankan denga
 - Docker Desktop (Docker Compose v2)
 
 ## Menjalankan
-Tiga service: `frontend` (nginx, juga mem-proxy `/api`), `api` (PHP + Apache), `db` (MariaDB).
+Tiga service: `frontend` (Apache, juga mem-proxy `/api`), `api` (PHP + Apache), `db` (MariaDB).
 Ada dua file compose, dan masing-masing berdiri sendiri.
 
 **Siapa saja** (`docker-compose.yml`, semuanya di-build ke image):
@@ -27,7 +27,7 @@ tambahkan `APP_COOKIE_SECURE=0` di `.env`. Untuk produksi, pakai `.env.prod` dan
    - Aplikasi: `http://localhost:8080`
    - API langsung: `http://localhost:<API_PORT>/api/v1/health`
    - Database dari komputer Anda: `127.0.0.1:<DB_HOST_PORT>`
-3. Setelah mengubah `frontend/nginx.conf`, jalankan perintah di atas dengan `restart frontend`.
+3. Setelah mengubah `frontend/httpd.conf`, jalankan perintah di atas dengan `restart frontend`.
    Perubahan `Dockerfile` atau `php.ini` butuh `--build`.
 
 Melihat isi database (nama container dev `projekadita-dev-db-1`; untuk file standar `projekadita-db-1`):

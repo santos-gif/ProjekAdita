@@ -22,7 +22,7 @@ export function setMessage(node, text, kind = 'error') {
 /** Fields use id="<id>" and an error element id="<id>-error". */
 export function showFieldErrors(form, errors = {}) {
   let first = null;
-  for (const input of form.querySelectorAll('input')) {
+  for (const input of form.querySelectorAll('input, textarea')) {
     const out = form.querySelector(`#${input.id}-error`);
     const msg = errors[input.name] || '';
     if (out) setMessage(out, msg);

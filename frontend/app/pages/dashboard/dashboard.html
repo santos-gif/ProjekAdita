@@ -20,16 +20,13 @@
     <aside id="sidebar" class="sidebar" aria-label="Menu navigasi"></aside>
     <main class="page" id="main" tabindex="-1">
       <noscript><p class="notice">Dashboard membutuhkan JavaScript. Aktifkan JavaScript di browser Anda.</p></noscript>
-      <p id="status" class="notice" role="status">Memuat dashboard...</p>
-      <section id="content" aria-labelledby="title" hidden>
-        <h1 id="title"></h1>
-        <h2><span class="title-underline">Proyek</span></h2>
-        <div class="empty">
-          <h3>Belum ada proyek</h3>
-          <p>Proyek yang kamu buat atau ikuti akan tampil di sini. Mulai sekarang dengan membuat proyek baru.</p>
-          <a class="btn" href="/add-project">Tambah proyek</a>
-        </div>
-      </section>
+      <div id="notification" class="notice" role="status" hidden></div>
+      <h1 id="title"></h1>
+      <div class="item-actions">
+        <a class="btn" href="/add-project">Tambah proyek</a>
+        <a class="btn btn--ghost" href="/discover">Jelajahi proyek</a>
+      </div>
+      <div id="content" class="detail"></div>
     </main>
   </div>
 </body>

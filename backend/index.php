@@ -6,24 +6,28 @@ use Core\Csrf;
 use Core\Db;
 use Core\Response;
 use Core\Router;
-use Features\Admin\AdminController;
-use Features\Applications\ApplicationController;
-use Features\Auth\AuthController;
-use Features\Dashboard\DashboardController;
-use Features\Discovery\DiscoveryController;
-use Features\Notifications\NotificationController;
-use Features\Projects\ProjectController;
-use Features\Projects\TeamController;
-use Features\Reports\ReportController;
-use Features\Review\ReviewController;
-use Features\Tags\TagController;
-use Features\User\ProfileController;
-use Features\User\UserController;
+use Features\Admin\Controller\AdminController;
+use Features\Applications\Controller\ApplicationController;
+use Features\Auth\Controller\AuthController;
+use Features\Dashboard\Controller\DashboardController;
+use Features\Discovery\Controller\DiscoveryController;
+use Features\Notifications\Controller\NotificationController;
+use Features\Projects\Controller\ProjectController;
+use Features\Projects\Controller\TeamController;
+use Features\Reports\Controller\ReportController;
+use Features\Review\Controller\ReviewController;
+use Features\Tags\Controller\TagController;
+use Features\User\Controller\ProfileController;
+use Features\User\Controller\UserController;
 
 // Namespace root -> folder under backend/ (Core\Db => Core/Db.php); no Composer.
+// The namespace is the folder path: Features\Projects\Controller\TeamController => Features/Projects/Controller/TeamController.php.
 spl_autoload_register(static function (string $class): void {
+	if (!preg_match('/^(Core|Features|Shared)\\\\/', $class)) {
+		return;
+	}
 	$file = __DIR__ . '/' . str_replace('\\', '/', $class) . '.php';
-	if (preg_match('/^(Core|Features)\\\\/', $class) && is_file($file)) {
+	if (is_file($file)) {
 		require $file;
 	}
 });

@@ -35,9 +35,9 @@ final class Request
 	}
 
 	/**
-	 * Address of the client. nginx overwrites X-Forwarded-For with the real peer, so it names the visitor
-	 * (REMOTE_ADDR would always be the nginx container).
-	 * shortcut: trusts the header; when the API is reachable without nginx (dev API_PORT) a client can spoof it.
+	 * Address of the client. The frontend's Apache drops any X-Forwarded-For the visitor sent and adds the real peer,
+	 * so it names the visitor (REMOTE_ADDR would always be the frontend container).
+	 * shortcut: trusts the header; when the API is reachable without the frontend (dev API_PORT) a client can spoof it.
 	 */
 	public static function ip(): string
 	{

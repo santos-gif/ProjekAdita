@@ -15,7 +15,7 @@ final readonly class Profile
 		public int $id,
 		public string $name,
 		public string $email,
-		public string $role,
+		public Role $accountRole,
 		public ?string $identityNumber,
 		public ?string $studyProgram,
 		public ?int $cohortYear,
@@ -46,7 +46,7 @@ final readonly class Profile
 	{
 		$data = $this->toPublicArray();
 		$data['email'] = $this->email;
-		$data['role'] = $this->role;
+		$data['role'] = $this->accountRole->value;
 		$data['identity_number'] = $this->identityNumber;
 		$data['phone'] = $this->phone;
 		return $data;

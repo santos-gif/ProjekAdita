@@ -40,6 +40,7 @@ function toUi(p) {
     thumbnail: p.thumbnail,
     status: UI_STATUS[p.status] ?? p.status,
     backendStatus: p.status,
+    rejectionReason: p.rejection_reason,
     members_count: p.members_count,
     members: `${p.members_count} Anggota`,
     timeAgo: timeAgo(p.created_at, p.updated_at),

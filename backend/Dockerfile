@@ -20,7 +20,7 @@ cat > /etc/apache2/sites-available/000-default.conf <<'CONF'
             Require all granted
         </Files>
     </Directory>
-    # Every URL goes to the front controller, so Core/, Features/ and database/ are never served raw.
+    # Every URL goes to the front controller, so Core/, Features/, Shared/ and database/ are never served raw.
     RewriteEngine On
     RewriteRule ^ /index.php [L]
 </VirtualHost>

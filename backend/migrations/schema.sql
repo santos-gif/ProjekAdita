@@ -28,7 +28,7 @@ CREATE TABLE IF NOT EXISTS projects (
     id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
     owner_id BIGINT UNSIGNED NOT NULL,
     project_name VARCHAR(120) NOT NULL,
-    thumbnail_url VARCHAR(255) NULL,  -- '/uploads/<random>.<ext>': the file sits in the shared uploads volume, nginx serves it
+    thumbnail_url VARCHAR(255) NULL,  -- '/uploads/<random>.<ext>': the file sits in the shared uploads volume, Apache serves it
     description LONGTEXT NOT NULL,
     requirements TEXT NULL,
     -- draft: the owner's saved-but-not-submitted form (one per owner, never listed); the rest is the review flow.

@@ -1,6 +1,6 @@
 import { logout } from '../../../features/auth/auth.api.js';
 import { requireUser } from '../../../features/auth/auth.session.js';
-import { setMessage } from '../../../shared/helpers/dom.js';
+import { el, setMessage } from '../../../shared/helpers/dom.js';
 import { mountShell } from '../../layouts/shell.js';
 import { listMine, deleteProject } from '../../../features/projects/projects.api.js';
 
@@ -39,7 +39,13 @@ if (currentUser) {
 }
 
 let allProjects = [];
-let currentFilter = 'all'; // 'all' | 'approved' | 'pending'
+let currentFilter = 'all'; // 'all' | 'approved' | 'pending' | 'rejected'
+
+const STATUS_LABEL = { approved: 'Disetujui', pending: 'Pending', rejected: 'Ditolak' };
+
+// The backend allows editing only until the moderator has decided; withdrawing stays possible until the end of the review.
+const canEdit = (project) => project.backendStatus === 'pending_moderation';
+const canWithdraw = (project) => project.status === 'pending';
 let searchQuery = '';
 
 // My projects come from the backend once; the tabs, the counts and the search then work on this list.
@@ -58,6 +64,7 @@ const emptyState = document.getElementById('empty-state');
 const countAll = document.getElementById('count-all');
 const countApproved = document.getElementById('count-approved');
 const countPending = document.getElementById('count-pending');
+const countRejected = document.getElementById('count-rejected');
 const paginationInfo = document.getElementById('pagination-info');
 
 // Dialog Detail Elements
@@ -75,6 +82,8 @@ const modalReq = document.getElementById('modal-req');
 const modalReqSection = document.getElementById('modal-req-section');
 const modalSelection = document.getElementById('modal-selection');
 const modalMembers = document.getElementById('modal-members');
+const modalRejectSection = document.getElementById('modal-reject-section');
+const modalReject = document.getElementById('modal-reject');
 const modalTags = document.getElementById('modal-tags');
 
 // Confirmation Cancel Dialog Elements
@@ -132,10 +141,12 @@ function openProjectDetail(project) {
   modalTitle.textContent = project.title || 'Tanpa Judul';
   modalCategory.textContent = project.category || 'Riset Terapan';
   
-  const isApproved = project.status === 'approved';
-  modalStatus.textContent = isApproved ? 'Disetujui' : 'Menunggu Persetujuan';
-  modalStatus.className = `status-badge ${isApproved ? 'status-badge--approved' : 'status-badge--pending'}`;
-  
+  modalStatus.textContent = STATUS_LABEL[project.status] || project.status;
+  modalStatus.className = `status-badge status-badge--${project.status}`;
+
+  modalRejectSection.hidden = project.status !== 'rejected';
+  modalReject.textContent = project.rejectionReason || '-';
+
   modalTime.textContent = project.timeAgo || 'Baru saja';
   modalDesc.textContent = project.description || '-';
   
@@ -159,20 +170,14 @@ function openProjectDetail(project) {
     });
   }
 
-  // Tampilkan tombol Edit & Batal jika proyek berstatus pending
-  if (project.status === 'pending') {
-    modalBtnEdit.hidden = false;
-    modalBtnEdit.href = `/add-project?edit=${project.id}`;
-    
-    modalBtnCancel.hidden = false;
-    modalBtnCancel.onclick = () => {
-      closeDetailDialog();
-      openCancelConfirmation(project);
-    };
-  } else {
-    modalBtnEdit.hidden = true;
-    modalBtnCancel.hidden = true;
-  }
+  modalBtnEdit.hidden = !canEdit(project);
+  modalBtnEdit.href = `/add-project?edit=${project.id}`;
+
+  modalBtnCancel.hidden = !canWithdraw(project);
+  modalBtnCancel.onclick = () => {
+    closeDetailDialog();
+    openCancelConfirmation(project);
+  };
 
   detailDialog.showModal();
 }
@@ -191,42 +196,16 @@ function renderThumbnail(project) {
     return thumbWrap;
   }
 
-  const poster = document.createElement('div');
-  if (project.thumbnailType === 'cyber') {
-    poster.className = 'mock-poster mock-poster--cyber';
-    poster.innerHTML = `
-      <div class="poster-graphic-glow"></div>
-      <div class="poster-header-tag">CYBER SECURITY PROJECT</div>
-      <div style="font-size: 7px; color: #38bdf8; letter-spacing: 0.5px;">CAMPUS NETWORK DEFENSE</div>
-      <div>
-        <div class="poster-title">CYBER SECURITY</div>
-        <div class="poster-subtitle">Shielding Against Cyber Threats</div>
-      </div>
-    `;
-  } else if (project.thumbnailType === 'ai') {
-    poster.className = 'mock-poster mock-poster--ai';
-    poster.innerHTML = `
-      <div class="poster-graphic-glow" style="background: radial-gradient(circle, rgba(168, 85, 247, 0.3) 0%, transparent 70%);"></div>
-      <div class="poster-header-tag" style="color: #c084fc;">ARTIFICIAL INTELLIGENCE ROBOTICS</div>
-      <div style="font-size: 7px; color: #a855f7; letter-spacing: 0.5px;">INNOVATION & FUTURE FRONTIERS</div>
-      <div>
-        <div class="poster-title">ARTIFICIAL INTELLIGENCE</div>
-        <div class="poster-subtitle">Robotics & Automation Presentation</div>
-      </div>
-    `;
-  } else {
-    poster.className = 'mock-poster mock-poster--generic';
-    const cleanTitle = (project.title || 'PROJECT').toUpperCase();
-    poster.innerHTML = `
-      <div class="poster-graphic-glow" style="background: radial-gradient(circle, rgba(34, 197, 94, 0.25) 0%, transparent 70%);"></div>
-      <div class="poster-header-tag" style="color: #4ade80;">PROYEK KOLABORASI</div>
-      <div style="font-size: 7px; color: #86efac; letter-spacing: 0.5px;">PROJEKADITA KAMPUS</div>
-      <div>
-        <div class="poster-title">${cleanTitle.slice(0, 30)}</div>
-        <div class="poster-subtitle">${project.category || 'Riset Terapan'}</div>
-      </div>
-    `;
-  }
+  // No image: a drawn poster. The title is user text, so it goes in through el() (textContent), never innerHTML.
+  const poster = el('div', { class: 'mock-poster mock-poster--generic' },
+    el('div', { class: 'poster-graphic-glow' }),
+    el('div', { class: 'poster-header-tag', text: 'PROYEK KOLABORASI' }),
+    el('div', { class: 'poster-kicker', text: 'PROJEKADITA KAMPUS' }),
+    el('div', {},
+      el('div', { class: 'poster-title', text: (project.title || 'PROJECT').toUpperCase().slice(0, 30) }),
+      el('div', { class: 'poster-subtitle', text: project.category || 'Riset Terapan' })
+    )
+  );
 
   thumbWrap.appendChild(poster);
   return thumbWrap;
@@ -238,16 +217,16 @@ function renderProjects() {
   const totalCount = allProjects.length;
   const approvedCount = allProjects.filter(p => p.status === 'approved').length;
   const pendingCount = allProjects.filter(p => p.status === 'pending').length;
+  const rejectedCount = allProjects.filter(p => p.status === 'rejected').length;
 
   countAll.textContent = totalCount;
   countApproved.textContent = approvedCount;
   countPending.textContent = pendingCount;
+  countRejected.textContent = rejectedCount;
 
   let filtered = allProjects;
-  if (currentFilter === 'approved') {
-    filtered = filtered.filter(p => p.status === 'approved');
-  } else if (currentFilter === 'pending') {
-    filtered = filtered.filter(p => p.status === 'pending');
+  if (currentFilter !== 'all') {
+    filtered = filtered.filter(p => p.status === currentFilter);
   }
 
   if (searchQuery) {
@@ -315,6 +294,7 @@ function renderProjects() {
     // Members
     const membersWrap = document.createElement('div');
     membersWrap.className = 'card-members';
+    // The icon is a fixed literal; the text next to it is project data, so it goes in as text.
     membersWrap.innerHTML = `
       <svg class="members-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
         <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
@@ -322,8 +302,8 @@ function renderProjects() {
         <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
         <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
       </svg>
-      <span>${project.members || `${project.members_count || 1}/${project.max_members || 4} Anggota Terisi`}</span>
     `;
+    membersWrap.append(el('span', { text: project.members || `${project.members_count || 1}/${project.max_members || 4} Anggota Terisi` }));
 
     // Tags
     const tagsWrap = document.createElement('div');
@@ -345,9 +325,8 @@ function renderProjects() {
     rightSection.className = 'card-actions-right';
 
     const statusBadge = document.createElement('span');
-    const isApproved = project.status === 'approved';
-    statusBadge.className = `status-badge ${isApproved ? 'status-badge--approved' : 'status-badge--pending'}`;
-    statusBadge.textContent = isApproved ? 'Disetujui' : 'Pending';
+    statusBadge.className = `status-badge status-badge--${project.status}`;
+    statusBadge.textContent = STATUS_LABEL[project.status] || project.status;
 
     // Links / Action Buttons
     const actionLinks = document.createElement('div');
@@ -361,22 +340,23 @@ function renderProjects() {
     detailBtn.addEventListener('click', () => openProjectDetail(project));
     actionLinks.appendChild(detailBtn);
 
-    // Jika proyek masih diajukan (pending), tambahkan tombol Edit dan Batalkan
-    if (project.status === 'pending') {
+    if (canEdit(project)) {
       const editBtn = document.createElement('a');
       editBtn.className = 'btn-card-action btn-card-edit';
       editBtn.href = `/add-project?edit=${project.id}`;
       editBtn.textContent = 'Edit';
       editBtn.setAttribute('aria-label', `Edit pengajuan proyek ${project.title}`);
+      actionLinks.append(editBtn);
+    }
 
+    if (canWithdraw(project)) {
       const cancelBtn = document.createElement('button');
       cancelBtn.type = 'button';
       cancelBtn.className = 'btn-card-action btn-card-cancel';
       cancelBtn.textContent = 'Batalkan';
       cancelBtn.setAttribute('aria-label', `Batalkan pengajuan proyek ${project.title}`);
       cancelBtn.addEventListener('click', () => openCancelConfirmation(project));
-
-      actionLinks.append(editBtn, cancelBtn);
+      actionLinks.append(cancelBtn);
     }
 
     rightSection.append(statusBadge, actionLinks);

@@ -477,6 +477,11 @@
   background: #94a3b8;
 }
 
+.tags-dropdown-hint {
+  font-size: 0.6875rem;
+  color: #94a3b8;
+}
+
 .tags-dropdown-header {
   position: sticky;
   top: 0;

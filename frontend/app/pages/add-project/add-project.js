@@ -1,6 +1,6 @@
 import { logout } from '../../../features/auth/auth.api.js';
 import { requireUser } from '../../../features/auth/auth.session.js';
-import { setMessage } from '../../../shared/helpers/dom.js';
+import { el, setMessage } from '../../../shared/helpers/dom.js';
 import { mountShell } from '../../layouts/shell.js';
 import { fetchTags, getProject, getDraft, saveDraft, createProject, updateProject } from '../../../features/projects/projects.api.js';
 
@@ -228,12 +228,10 @@ function showTagSuggestions(query) {
   });
 
   // Tambahkan header info jumlah hasil
-  const headerEl = document.createElement('div');
-  headerEl.className = 'tags-dropdown-header';
-  headerEl.innerHTML = `
-    <span>Ditemukan <strong class="tags-dropdown-count">${matched.length}</strong> tag resmi</span>
-    <span style="font-size: 0.6875rem; color: #94a3b8;">Gulir untuk melihat semua ↓</span>
-  `;
+  const headerEl = el('div', { class: 'tags-dropdown-header' },
+    el('span', {}, 'Ditemukan ', el('strong', { class: 'tags-dropdown-count', text: String(matched.length) }), ' tag resmi'),
+    el('span', { class: 'tags-dropdown-hint', text: 'Gulir untuk melihat semua ↓' })
+  );
   tagsDropdown.appendChild(headerEl);
 
   // Tampilkan SEMUA tag yang cocok (tanpa limit slice) sehingga seluruh elemen terlihat
@@ -242,15 +240,18 @@ function showTagSuggestions(query) {
     option.className = `tags-dropdown-item ${index === 0 ? 'is-selected' : ''}`;
     option.setAttribute('role', 'option');
 
-    // Highlight text matching query
-    const escapedQ = cleanQ.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    const regex = new RegExp('(' + escapedQ + ')', 'gi');
-    const highlightedName = item.name.replace(regex, '<mark>$1</mark>');
-
-    option.innerHTML = `
-      <span class="dropdown-tag-name">#${highlightedName}</span>
-      <span class="dropdown-tag-category">${item.category}</span>
-    `;
+    // Highlight the typed part of the name. Every match includes the query, so indexOf finds it.
+    const start = item.name.toLowerCase().indexOf(cleanQ);
+    const end = start + cleanQ.length;
+    option.append(
+      el('span', { class: 'dropdown-tag-name' },
+        '#',
+        item.name.slice(0, start),
+        el('mark', { text: item.name.slice(start, end) }),
+        item.name.slice(end)
+      ),
+      el('span', { class: 'dropdown-tag-category', text: item.category })
+    );
 
     option.addEventListener('mousedown', (e) => {
       e.preventDefault();
@@ -364,7 +365,7 @@ if (editId) {
     document.title = 'Edit Proyek - ProjekAdita';
     if (bannerTitle) bannerTitle.textContent = 'Edit Pengajuan Proyek';
     if (btnUpload) {
-      btnUpload.innerHTML = '<span class="upload-arrow" aria-hidden="true">✓</span> Simpan Perubahan';
+      btnUpload.replaceChildren(el('span', { class: 'upload-arrow', 'aria-hidden': 'true', text: '✓' }), ' Simpan Perubahan');
     }
     fillForm(editingProject);
     notify(`Mode edit: Anda sedang memperbarui proyek "${editingProject.title}".`, 'info');

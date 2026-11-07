@@ -1,2 +1,6 @@
-/* The 501 notice is the main outcome of this page, so give it room. */
+/* The "code sent" notice is the main outcome of step 1, so give it room. */
 #form-message[data-kind="info"] { padding: var(--s4); }
+
+/* Step 2 of the reset form: hidden until the code has been requested. */
+#code-step { display: grid; gap: var(--s4); }
+#code-step[hidden] { display: none; }

@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Profil Saya - ProjekAdita</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/shared/styles/tokens.css">
+  <link rel="stylesheet" href="/shared/styles/base.css">
+  <link rel="stylesheet" href="/shared/styles/components.css">
+  <script type="module" src="/app/pages/profile/profile.js"></script>
+</head>
+<body>
+  <a class="skip" href="#main">Lewati ke konten</a>
+  <div id="shell"></div>
+
+  <div class="app-layout">
+    <aside id="sidebar" class="sidebar" aria-label="Menu navigasi"></aside>
+
+    <main class="page" id="main" tabindex="-1">
+      <noscript><p class="notice">Halaman ini membutuhkan JavaScript.</p></noscript>
+      <div id="notification" class="notice" role="status" hidden></div>
+
+      <section class="panel" aria-labelledby="profile-title">
+        <div class="panel-head">
+          <span id="profile-avatar" class="avatar avatar--lg" aria-hidden="true"></span>
+          <div>
+            <h1 id="profile-title">Profil Saya</h1>
+            <p id="profile-email" class="field-hint"></p>
+          </div>
+        </div>
+
+        <form id="profile-form" novalidate>
+          <p id="form-message" class="notice" role="alert"></p>
+          <div class="field">
+            <label for="name">Nama lengkap</label>
+            <input id="name" name="name" type="text" autocomplete="name" required aria-describedby="name-error">
+            <p id="name-error" class="field-error"></p>
+          </div>
+          <div class="field">
+            <label for="study_program">Program studi</label>
+            <input id="study_program" name="study_program" type="text" aria-describedby="study_program-error">
+            <p id="study_program-error" class="field-error"></p>
+          </div>
+          <div class="field">
+            <label for="cohort_year">Angkatan</label>
+            <input id="cohort_year" name="cohort_year" type="number" inputmode="numeric" min="2000" aria-describedby="cohort_year-error">
+            <p id="cohort_year-error" class="field-error"></p>
+          </div>
+          <div class="field">
+            <label for="identity_number">NIM / NIDN</label>
+            <input id="identity_number" name="identity_number" type="text" aria-describedby="identity_number-error">
+            <p id="identity_number-error" class="field-error"></p>
+          </div>
+          <div class="field">
+            <label for="phone">Nomor telepon</label>
+            <input id="phone" name="phone" type="tel" autocomplete="tel" aria-describedby="phone-error">
+            <p id="phone-error" class="field-error"></p>
+          </div>
+          <div class="field">
+            <label for="bio">Bio</label>
+            <textarea id="bio" name="bio" rows="5" aria-describedby="bio-hint bio-error"></textarea>
+            <p id="bio-hint" class="field-hint">CV singkat, keahlian, dan ketersediaan waktu. Terlihat oleh pengguna lain.</p>
+            <p id="bio-error" class="field-error"></p>
+          </div>
+          <div class="panel-actions">
+            <button class="btn" type="submit">Simpan profil</button>
+            <a class="btn btn--ghost" href="/change-password">Ubah kata sandi</a>
+          </div>
+        </form>
+      </section>
+    </main>
+  </div>
+</body>
+</html>

@@ -10,7 +10,7 @@ final readonly class Member
 	public function __construct(
 		public int $userId,
 		public string $name,
-		public ProjectRole $role,
+		public ProjectRole $projectRole,
 		public string $title,
 		public int $joinedAt,
 	) {}
@@ -21,7 +21,7 @@ final readonly class Member
 		return [
 			'user_id' => $this->userId,
 			'name' => $this->name,
-			'role' => $this->role->value,
+			'project_role' => $this->projectRole->value,
 			'title' => $this->title,
 			'joined_at' => $this->joinedAt,
 		];

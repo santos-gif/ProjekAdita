@@ -1,4 +1,4 @@
-FROM nginxinc/nginx-unprivileged:1.27-alpine
+FROM httpd:2.4-alpine
 
-COPY nginx.conf /etc/nginx/conf.d/default.conf
-COPY . /usr/share/nginx/html
+COPY httpd.conf /usr/local/apache2/conf/httpd.conf
+COPY . /usr/local/apache2/htdocs

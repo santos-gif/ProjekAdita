@@ -13,12 +13,12 @@ final readonly class User
 		public int $id,
 		public string $name,
 		public string $email,
-		public Role $role,
+		public Role $accountRole,
 	) {}
 
-	/** @return array{id:int,name:string,email:string,role:string} */
+	/** @return array{id:int,name:string,email:string,role:string} "role" is the account role (user, moderator, admin) */
 	public function toArray(): array
 	{
-		return ['id' => $this->id, 'name' => $this->name, 'email' => $this->email, 'role' => $this->role->value];
+		return ['id' => $this->id, 'name' => $this->name, 'email' => $this->email, 'role' => $this->accountRole->value];
 	}
 }

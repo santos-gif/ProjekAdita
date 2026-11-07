@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Pengguna - ProjekAdita</title>
+  <link rel="stylesheet" href="/shared/styles/tokens.css">
+  <link rel="stylesheet" href="/shared/styles/base.css">
+  <link rel="stylesheet" href="/shared/styles/components.css">
+  <script type="module" src="/app/pages/users/users.js"></script>
+</head>
+<body>
+  <a class="skip" href="#main">Lewati ke konten</a>
+  <div id="shell"></div>
+  <div class="app-layout">
+    <aside id="sidebar" class="sidebar" aria-label="Menu navigasi"></aside>
+    <main class="page" id="main" tabindex="-1">
+      <noscript><p class="notice">Halaman ini membutuhkan JavaScript.</p></noscript>
+      <div id="notification" class="notice" role="status" hidden></div>
+      <h1>Pengguna</h1>
+      <form id="filters" class="toolbar">
+        <div class="field">
+          <label for="keyword">Nama atau email</label>
+          <input id="keyword" name="q" type="text" autocomplete="off">
+        </div>
+        <div class="field">
+          <label for="role">Peran</label>
+          <select id="role" name="role">
+            <option value="">Semua</option>
+            <option value="user">Pengguna</option>
+            <option value="moderator">Moderator</option>
+            <option value="admin">Admin</option>
+          </select>
+        </div>
+        <button class="btn" type="submit">Cari</button>
+      </form>
+      <div id="list" class="item-list"></div>
+      <div id="pager" class="pager"></div>
+    </main>
+  </div>
+</body>
+</html>
